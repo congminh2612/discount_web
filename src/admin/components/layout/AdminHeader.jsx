@@ -28,7 +28,6 @@ const AdminHeader = () => {
       </div>
 
       <div className='flex items-center space-x-4'>
-        {/* Select để chọn ngôn ngữ */}
         <Select
           defaultValue='vn'
           className='w-28 text-black'
@@ -39,10 +38,7 @@ const AdminHeader = () => {
         />
 
         <Popover content={menu} trigger='click'>
-          <Button
-            type='text'
-            className='text-white hover:text-red-500 flex items-center space-x-2'
-          >
+          <Button type='text' className='text-white hover:text-red-500 flex items-center space-x-2'>
             <span className='font-semibold'>Xin chào, Admin</span>
             <DownOutlined />
           </Button>
