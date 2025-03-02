@@ -1,4 +1,4 @@
-import { Button, Menu, Popover } from 'antd';
+import { Button, Menu, Popover, Select } from 'antd';
 import { Header } from 'antd/es/layout/layout';
 import { NavLink } from 'react-router-dom';
 import { DownOutlined } from '@ant-design/icons';
@@ -14,8 +14,9 @@ const AdminHeader = () => {
       </Menu.Item>
     </Menu>
   );
+
   return (
-    <Header className='bg-header-admin h-[60px]  w-full text-white shadow-md  flex justify-between items-center'>
+    <Header className='bg-header-admin h-[60px] w-full text-white shadow-md flex justify-between items-center px-4'>
       <div className='flex items-center'>
         <NavLink to='/' className='text-xl font-bold text-white'>
           <img
@@ -26,7 +27,17 @@ const AdminHeader = () => {
         </NavLink>
       </div>
 
-      <div className='flex items-center'>
+      <div className='flex items-center space-x-4'>
+        {/* Select để chọn ngôn ngữ */}
+        <Select
+          defaultValue='vn'
+          className='w-28 text-black'
+          options={[
+            { value: 'vn', label: '🇻🇳 Tiếng Việt' },
+            { value: 'en', label: '🇬🇧 English' },
+          ]}
+        />
+
         <Popover content={menu} trigger='click'>
           <Button
             type='text'
