@@ -59,7 +59,7 @@ const ProductManager = () => {
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-    return products?.data.filter((product) => {
+    return products.data?.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = categoryFilter ? product.category_id === categoryFilter : true;
       return matchesSearch && matchesCategory;
