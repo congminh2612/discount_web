@@ -59,7 +59,7 @@ const ProductManager = () => {
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-    return products.data.filter((product) => {
+    return products?.data.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = categoryFilter ? product.category_id === categoryFilter : true;
       return matchesSearch && matchesCategory;
@@ -146,11 +146,12 @@ const ProductManager = () => {
             onChange={(value) => setCategoryFilter(value)}
             className='w-48'
           >
-            {categories?.data.map((category) => (
-              <Option key={category.id} value={category.id}>
-                {category.name}
-              </Option>
-            ))}
+            {categories &&
+              categories?.data?.map((category) => (
+                <Option key={category.id} value={category.id}>
+                  {category.name}
+                </Option>
+              ))}
           </Select>
         </div>
         <div className='space-x-2'>
