@@ -20,7 +20,7 @@ const slides = [
   },
   {
     id: 3,
-    image: 'https://esmee.qodeinteractive.com/wp-content/uploads/2021/07/main-home-rev-img-2-50x100.jpg',
+    image: 'https://esmee.qodeinteractive.com/wp-content/uploads/2021/07/main-home-rev-img-2.jpg',
     title: 'Luxury & Comfort',
     description: 'Experience high-end fashion combined with ultimate comfort and elegance.',
   },
