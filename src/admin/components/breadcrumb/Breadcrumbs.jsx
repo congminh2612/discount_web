@@ -8,7 +8,7 @@ const breadcrumbMap = {
   '/admin/product/create': 'Thêm sản phẩm',
   '/admin/orders': 'Đơn hàng',
   '/admin/discounts': 'Giảm giá',
-  '/admin/discount/cp/create': 'Tạo custom pricing', // ✅ Fix ở đây
+  '/admin/discount/cp/create': 'Tạo custom pricing',
 };
 
 const Breadcrumbs = () => {
