@@ -9,6 +9,11 @@ import { useSelector } from 'react-redux';
 const queryClient = new QueryClient();
 
 function App() {
+  const language = useSelector((state) => state.language.language);
+  useEffect(() => {
+    i18n.changeLanguage(language);
+  }, [language]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={mainRouter} />

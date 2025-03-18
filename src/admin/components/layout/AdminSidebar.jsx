@@ -8,10 +8,9 @@ import { useTranslation } from 'react-i18next';
 const { Sider } = Layout;
 
 const AdminSidebar = () => {
-  const { t } = useTranslation(); // ✅ Dùng useTranslation để lấy t()
+  const { t } = useTranslation();
   const [openMenus, setOpenMenus] = useState({});
-  const AdminNavigationItems = getAdminNavigationItems(t); // ✅ Lấy danh sách menu đã dịch
-
+  const AdminNavigationItems = getAdminNavigationItems(t);
   const toggleMenu = (id) => {
     setOpenMenus((prev) => ({ ...prev, [id]: !prev[id] }));
   };
