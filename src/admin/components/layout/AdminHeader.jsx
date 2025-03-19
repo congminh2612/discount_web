@@ -32,7 +32,7 @@ const AdminHeader = () => {
         <NavLink to='/' className='text-xl font-bold text-white'>
           <img
             src='https://lh3.googleusercontent.com/pw/ADCreHd5PMvwKUSbjtSRpUfeyDaazAbdXF1H0arvHtS62AyfivDEAN6hRSq-GTJ6wKiyn-9IEr63aaiNtFq6J2fP_I6VtpGAIwqAQu4B2mL64M2h2HHkPY4VhRWoDpag5VXN3Dxtwb277ZDkXPa0mnDxTTGL=w256'
-            alt='Lotteria Logo'
+            alt=' Logo'
             width='150px'
           />
         </NavLink>
@@ -40,7 +40,7 @@ const AdminHeader = () => {
 
       <div className='flex items-center space-x-4'>
         <Select
-          value={language} // Đồng bộ với Redux
+          value={language}
           className='w-28 text-black'
           onChange={handleLanguageChange}
           options={[

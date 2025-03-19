@@ -65,5 +65,11 @@
     "print": "In",
     "start_date": "Ngày bắt đầu",
     "end_date": "Ngày kết thúc"
+  },
+  "home": {
+    "sign_in": "Đăng nhập",
+    "sign_up": "Đăng ký",
+    "logout": "Đăng xuất",
+    "settings": "Cài đặt"
   }
 }

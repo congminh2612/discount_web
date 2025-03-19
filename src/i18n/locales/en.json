@@ -36,7 +36,7 @@
     "preview": "Preview",
     "percentage_discount": "Percentage Discount",
     "fixed_discount": "Fixed Discount",
-    "amount_discount": "Amount Discount"
+    "mount_discounta": "Amount Discount"
   },
   "general": {
     "add": "Add",
@@ -65,5 +65,13 @@
     "print": "Print",
     "start_date": "Start Date",
     "end_date": "End Date"
+  },
+  "home": {
+    "logout": "Logout",
+    "sign_in": "Sign In",
+    "sign_up": "Sign Up",
+    "settings": "Settings",
+    "profile": "Profile",
+    "help": "Help"
   }
 }
