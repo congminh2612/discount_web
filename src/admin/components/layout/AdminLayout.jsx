@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import AdminHeader from './AdminHeader';
-import AdminSidebar from './AdminSidebar';
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Breadcrumbs from '../breadcrumb/Breadcrumbs';
+import AdminHeader from './AdminHeader';
+import AdminSidebar from './AdminSidebar';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -13,7 +13,7 @@ const AdminLayout = () => {
 
   return (
     <div className='h-screen flex flex-col'>
-      <AdminHeader className='h-[60px] flex-shrink-0 z-30' />
+      <AdminHeader className='h-[100px] flex-shrink-0 z-30' />
 
       <button
         className='md:hidden fixed top-[70px] left-2 z-40 bg-primary p-2 rounded-full shadow-lg'
@@ -36,29 +36,22 @@ const AdminLayout = () => {
         </svg>
       </button>
 
-      <div className='flex flex-1'>
+      <div className='main-container'>
         {sidebarOpen && (
           <div className='md:hidden fixed inset-0 bg-black bg-opacity-50 z-20' onClick={toggleSidebar}></div>
         )}
 
         <div
-          className={`
-          fixed left-0 top-[60px] bottom-0 z-30
-          md:w-[260px] w-[240px] 
-          md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          transition-transform duration-300 ease-in-out
-          bg-white shadow-lg 
-        `}
+          className={`sidebar-fixed md:w-[260px] w-[240px] md:translate-x-0 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         >
-          <AdminSidebar />
+          <div className='sidebar-content fixed '>
+            <AdminSidebar />
+          </div>
         </div>
-        <main
-          className={`
-          flex-1 p-4 overflow-auto bg-content-admin
-          md:ml-[260px] ml-0
-          transition-all duration-300
-        `}
-        >
+
+        <main className={`main-content md:ml-[260px] ml-0`}>
           <div className='mt-8 ml-2'>
             <Breadcrumbs />
           </div>
