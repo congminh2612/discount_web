@@ -31,8 +31,10 @@ import {
   EnvironmentOutlined,
   ClockCircleOutlined,
   SafetyCertificateOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons';
 import { getProductById } from '@/service/product';
+import PriceTrendChart from './PriceTrendChart';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -279,7 +281,6 @@ const ProductDetail = () => {
   return (
     <div className='bg-gray-50 py-8'>
       <div className='container mx-auto px-4'>
-        {/* Breadcrumbs */}
         <Breadcrumb className='mb-4'>
           <Breadcrumb.Item href='/'>
             <HomeOutlined /> Trang chủ
@@ -553,6 +554,35 @@ const ProductDetail = () => {
             <TabPane tab='Thông số kỹ thuật' key='specifications'>
               <div className='py-4'>
                 <Empty description='Chưa có thông số kỹ thuật cho sản phẩm này' />
+              </div>
+            </TabPane>
+            <TabPane
+              tab={
+                <span>
+                  <LineChartOutlined /> Lịch sử giá
+                </span>
+              }
+              key='price-history'
+            >
+              <div className='py-4'>
+                {!product.has_variant ? (
+                  <PriceTrendChart productId={product.id} isVariant={false} title='Lịch sử biến động giá sản phẩm' />
+                ) : (
+                  <div>
+                    <PriceTrendChart productId={product.id} isVariant={false} title='Lịch sử biến động giá sản phẩm' />
+
+                    {selectedVariant && (
+                      <>
+                        <Divider orientation='left'>Lịch sử biến động giá biến thể hiện tại</Divider>
+                        <PriceTrendChart
+                          variantId={selectedVariant.id}
+                          isVariant={true}
+                          title={`Lịch sử biến động giá - ${selectedVariant.sku || 'Biến thể'}`}
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </TabPane>
             <TabPane tab='Đánh giá (120)' key='reviews'>
