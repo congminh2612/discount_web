@@ -1,6 +1,6 @@
-import { Input, Button, Dropdown, Menu, Select } from 'antd';
+import { Input, Button, Dropdown, Menu, Select, Badge } from 'antd';
 import { SearchOutlined, HeartOutlined, ShoppingCartOutlined, MenuOutlined, UserOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { DownOutlined } from '@ant-design/icons';
 import { setLanguage } from '@/context/slice/language';
@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { SettingOutlined, LogoutOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { logoutSuccess } from '@/context/slice/auth';
+import { fetchCart } from '@/context/slice/cart';
 
 const languages = [
   { key: 'en', label: 'English', flag: '🇬🇧' },
@@ -24,7 +25,15 @@ const Header = () => {
   };
 
   const currentUser = useSelector((state) => state.auth.currentUser);
+  const { itemCount } = useSelector((state) => state.cart);
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Fetch cart when user is logged in
+  useEffect(() => {
+    if (currentUser?.id) {
+      dispatch(fetchCart(currentUser.id));
+    }
+  }, [dispatch, currentUser]);
 
   const userMenu = (
     <Menu>
@@ -62,7 +71,14 @@ const Header = () => {
 
           <div className='flex items-center space-x-4 md:space-x-6'>
             <Button type='text' shape='circle' icon={<HeartOutlined className='text-gray-600 text-xl' />} />
-            <Button type='text' shape='circle' icon={<ShoppingCartOutlined className='text-gray-600 text-xl' />} />
+            <Badge count={itemCount} size="small" showZero={false}>
+              <Button 
+                type='text' 
+                shape='circle' 
+                icon={<ShoppingCartOutlined className='text-gray-600 text-xl' />} 
+                onClick={() => navigate('/cart')}
+              />
+            </Badge>
 
             {currentUser ? (
               <Dropdown overlay={userMenu} trigger={['click']}>
