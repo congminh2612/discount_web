@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSelector } from 'react-redux';
 import {
   Row,
@@ -18,6 +19,8 @@ import {
   message,
   Badge,
   Empty,
+  Modal,
+  Space
 } from 'antd';
 import {
   ShoppingCartOutlined,
@@ -35,6 +38,7 @@ import {
 } from '@ant-design/icons';
 import { getProductById } from '@/service/product';
 import PriceTrendChart from './PriceTrendChart';
+import { useCart } from '@/context/CartContext';
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -45,12 +49,16 @@ const ProductDetail = () => {
 
   const currentUser = useSelector((state) => state.auth.currentUser);
   const userId = currentUser?.id || '';
+  
+  const { cart, addItem, loading: cartLoading } = useCart();
 
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [selectedAttributes, setSelectedAttributes] = useState({});
   const [availableVariants, setAvailableVariants] = useState([]);
   const [currentImage, setCurrentImage] = useState(0);
+
+  const queryClient = useQueryClient();
 
   const {
     data: productData,
@@ -208,30 +216,75 @@ const ProductDetail = () => {
     }).format(amount);
   };
 
-  const handleAddToCart = () => {
-    if (!isInStock()) {
-      message.error('Sản phẩm đã hết hàng');
-      return;
-    }
-
-    const productToAdd = {
-      id: product.id,
-      name: product.name,
-      price: getFinalPrice(),
-      image: selectedVariant?.image_url || product.image_url,
-      quantity: quantity,
-      variant_id: selectedVariant?.id,
-    };
-
-    message.success('Đã thêm sản phẩm vào giỏ hàng');
+  const getCartQuantity = () => {
+    if (!cart?.items) return 0;
+    
+    const cartItem = cart.items.find(item => 
+      item.product_id === parseInt(id) && 
+      (selectedVariant 
+        ? item.variant_id === selectedVariant.id 
+        : !item.variant_id)
+    );
+    
+    return cartItem ? cartItem.quantity : 0;
   };
 
+  const handleAddToCart = async () => {
+    if (!isInStock()) {
+      message.error('Product is out of stock');
+      return;
+    }
+  
+    const productToAdd = {
+      id: parseInt(id),
+      name: product.name,
+      image_url: selectedVariant?.image_url || product.image_url,
+      final_price: getFinalPrice(),
+      original_price: getOriginalPrice(),
+      stock_quantity: getStockQuantity(),
+    };
+  
+    try {
+      await addItem(productToAdd, quantity, selectedVariant?.id || null);
+  
+      queryClient.invalidateQueries(['cart']);
+  
+      message.success(
+        <span>
+          Added to cart! <Button type="link" onClick={() => navigate('/cart')}>View Cart</Button>
+        </span>
+      );
+    } catch (error) {
+      message.error('Failed to add item to cart');
+    }
+  };
+  
+
   const handleAddToWishlist = () => {
-    message.info('Chức năng này sẽ được cập nhật trong thời gian tới!');
+    message.info('This feature will be updated soon!');
   };
 
   const handleShareProduct = () => {
-    message.info('Chức năng này sẽ được cập nhật trong thời gian tới!');
+    message.info('This feature will be updated soon!');
+  };
+
+  // Cart Status component
+  const CartStatus = () => {
+    const currentQuantity = getCartQuantity();
+    
+    if (currentQuantity === 0) return null;
+    
+    return (
+      <div className="mb-4 bg-blue-50 p-3 rounded-md flex items-center">
+        <CheckCircleFilled className="text-blue-500 mr-2" />
+        <span>
+          You already have <strong>{currentQuantity}</strong> of this item in your cart.
+          <Button type="link" onClick={() => navigate('/cart')} className="p-0 ml-1">
+            View Cart
+          </Button>
+        </span>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -261,10 +314,10 @@ const ProductDetail = () => {
     return (
       <div className='container mx-auto px-4 py-8 text-center'>
         <Title level={3} className='text-red-500'>
-          Không thể tải thông tin sản phẩm
+          Could not load product information
         </Title>
         <Button type='primary' onClick={() => navigate('/products')}>
-          Quay lại trang sản phẩm
+          Back to Products
         </Button>
       </div>
     );
@@ -283,9 +336,9 @@ const ProductDetail = () => {
       <div className='container mx-auto px-4'>
         <Breadcrumb className='mb-4'>
           <Breadcrumb.Item href='/'>
-            <HomeOutlined /> Trang chủ
+            <HomeOutlined /> Home
           </Breadcrumb.Item>
-          <Breadcrumb.Item href='/products'>Sản phẩm</Breadcrumb.Item>
+          <Breadcrumb.Item href='/products'>Products</Breadcrumb.Item>
           {product.category?.name && (
             <Breadcrumb.Item href={`/category/${product.category_id}`}>{product.category.name}</Breadcrumb.Item>
           )}
@@ -304,7 +357,7 @@ const ProductDetail = () => {
                   preview={{
                     visible: false,
                     src: productImages[currentImage],
-                    mask: <div className='text-white'>Xem</div>,
+                    mask: <div className='text-white'>View</div>,
                   }}
                 />
 
@@ -361,9 +414,9 @@ const ProductDetail = () => {
                   </Title>
                   <div className='flex items-center mb-4'>
                     <Rate disabled defaultValue={4.5} className='text-yellow-500 text-sm' />
-                    <Text className='ml-2 text-gray-500'>(120 đánh giá)</Text>
+                    <Text className='ml-2 text-gray-500'>(120 reviews)</Text>
                     <Divider type='vertical' className='mx-3' />
-                    <Text className='text-gray-500'>Đã bán: 350</Text>
+                    <Text className='text-gray-500'>Sold: 350</Text>
                   </div>
                 </div>
                 <div className='flex gap-2'>
@@ -382,7 +435,6 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* Giá */}
               <div className='bg-gray-50 p-4 rounded-lg mb-6'>
                 <div className='flex items-baseline'>
                   <Title level={2} className='text-red-600 m-0'>
@@ -397,7 +449,7 @@ const ProductDetail = () => {
                 {product.appliedRule && (
                   <div className='mt-2 flex items-center'>
                     <Tag color='gold' className='mr-2'>
-                      Khuyến mãi
+                      Promotion
                     </Tag>
                     <Text className='text-sm'>
                       {product.appliedRule.name}
@@ -413,13 +465,13 @@ const ProductDetail = () => {
                 <Row gutter={[16, 8]}>
                   <Col span={12}>
                     <div className='flex items-center'>
-                      <Text className='text-gray-500 mr-2'>Trạng thái:</Text>
+                      <Text className='text-gray-500 mr-2'>Status:</Text>
                       {isInStock() ? (
                         <Tag color='success' icon={<CheckCircleFilled />}>
-                          Còn hàng ({getStockQuantity()})
+                          In stock ({getStockQuantity()})
                         </Tag>
                       ) : (
-                        <Tag color='error'>Hết hàng</Tag>
+                        <Tag color='error'>Out of stock</Tag>
                       )}
                     </div>
                   </Col>
@@ -432,7 +484,7 @@ const ProductDetail = () => {
                   {product.category?.name && (
                     <Col span={12}>
                       <div className='flex items-center'>
-                        <Text className='text-gray-500 mr-2'>Danh mục:</Text>
+                        <Text className='text-gray-500 mr-2'>Category:</Text>
                         <Tag color='blue'>{product.category.name}</Tag>
                       </div>
                     </Col>
@@ -442,7 +494,7 @@ const ProductDetail = () => {
 
               {product.has_variant && getAttributeTypes().length > 0 && (
                 <div className='mb-6'>
-                  <Divider>Tùy chọn sản phẩm</Divider>
+                  <Divider>Product Options</Divider>
 
                   {getAttributeTypes().map((attrType) => (
                     <div key={attrType} className='mb-4'>
@@ -472,10 +524,9 @@ const ProductDetail = () => {
                 </div>
               )}
 
-              {/* Số lượng và thêm vào giỏ */}
               <div className='mb-6'>
                 <Text strong className='block mb-2'>
-                  Số lượng:
+                  Quantity:
                 </Text>
                 <div className='flex items-center gap-4'>
                   <InputNumber
@@ -485,9 +536,11 @@ const ProductDetail = () => {
                     onChange={(value) => setQuantity(value)}
                     className='w-[120px]'
                   />
-                  <Text className='text-gray-500'>{getStockQuantity()} sản phẩm có sẵn</Text>
+                  <Text className='text-gray-500'>{getStockQuantity()} products available</Text>
                 </div>
               </div>
+
+              <CartStatus />
 
               <div className='flex gap-4 mb-6'>
                 <Button
@@ -497,41 +550,42 @@ const ProductDetail = () => {
                   onClick={handleAddToCart}
                   className='flex-1'
                   disabled={!isInStock()}
+                  loading={cartLoading}
                 >
-                  Thêm vào giỏ hàng
+                  Add to Cart
                 </Button>
                 <Button type='default' size='large' onClick={handleAddToWishlist}>
-                  <HeartOutlined /> Yêu thích
+                  <HeartOutlined /> Wishlist
                 </Button>
               </div>
 
               <div className='bg-gray-50 p-4 rounded-lg mb-4'>
                 <Title level={5} className='mb-3'>
-                  Cam kết từ chúng tôi
+                  Our Commitment
                 </Title>
                 <Row gutter={[16, 16]}>
                   <Col span={12}>
                     <div className='flex items-center'>
                       <SafetyCertificateOutlined className='text-green-500 text-xl mr-2' />
-                      <Text>Chính hãng 100%</Text>
+                      <Text>100% Authentic</Text>
                     </div>
                   </Col>
                   <Col span={12}>
                     <div className='flex items-center'>
                       <EnvironmentOutlined className='text-blue-500 text-xl mr-2' />
-                      <Text>Giao hàng toàn quốc</Text>
+                      <Text>Nationwide Shipping</Text>
                     </div>
                   </Col>
                   <Col span={12}>
                     <div className='flex items-center'>
                       <ClockCircleOutlined className='text-orange-500 text-xl mr-2' />
-                      <Text>Đổi trả trong 7 ngày</Text>
+                      <Text>7-Day Returns</Text>
                     </div>
                   </Col>
                   <Col span={12}>
                     <div className='flex items-center'>
                       <InfoCircleOutlined className='text-purple-500 text-xl mr-2' />
-                      <Text>Tư vấn 24/7</Text>
+                      <Text>24/7 Support</Text>
                     </div>
                   </Col>
                 </Row>
@@ -542,42 +596,42 @@ const ProductDetail = () => {
 
         <div className='bg-white rounded-lg shadow-sm mt-8 p-6'>
           <Tabs defaultActiveKey='description'>
-            <TabPane tab='Mô tả sản phẩm' key='description'>
+            <TabPane tab='Product Description' key='description'>
               <div className='py-4'>
                 {product.description ? (
                   <div className='product-description' dangerouslySetInnerHTML={{ __html: product.description }} />
                 ) : (
-                  <Empty description='Chưa có mô tả cho sản phẩm này' />
+                  <Empty description='No description available for this product' />
                 )}
               </div>
             </TabPane>
-            <TabPane tab='Thông số kỹ thuật' key='specifications'>
+            <TabPane tab='Specifications' key='specifications'>
               <div className='py-4'>
-                <Empty description='Chưa có thông số kỹ thuật cho sản phẩm này' />
+                <Empty description='No specifications available for this product' />
               </div>
             </TabPane>
             <TabPane
               tab={
                 <span>
-                  <LineChartOutlined /> Lịch sử giá
+                  <LineChartOutlined /> Price History
                 </span>
               }
               key='price-history'
             >
               <div className='py-4'>
                 {!product.has_variant ? (
-                  <PriceTrendChart productId={product.id} isVariant={false} title='Lịch sử biến động giá sản phẩm' />
+                  <PriceTrendChart productId={product.id} isVariant={false} title='Product Price History' />
                 ) : (
                   <div>
-                    <PriceTrendChart productId={product.id} isVariant={false} title='Lịch sử biến động giá sản phẩm' />
+                    <PriceTrendChart productId={product.id} isVariant={false} title='Product Price History' />
 
                     {selectedVariant && (
                       <>
-                        <Divider orientation='left'>Lịch sử biến động giá biến thể hiện tại</Divider>
+                        <Divider orientation='left'>Variant Price History</Divider>
                         <PriceTrendChart
                           variantId={selectedVariant.id}
                           isVariant={true}
-                          title={`Lịch sử biến động giá - ${selectedVariant.sku || 'Biến thể'}`}
+                          title={`Price History - ${selectedVariant.sku || 'Variant'}`}
                         />
                       </>
                     )}
@@ -585,10 +639,10 @@ const ProductDetail = () => {
                 )}
               </div>
             </TabPane>
-            <TabPane tab='Đánh giá (120)' key='reviews'>
+            <TabPane tab='Reviews (120)' key='reviews'>
               <div className='py-4 text-center'>
-                <Empty description='Tính năng đánh giá đang được phát triển' className='my-10' />
-                <Button type='primary'>Viết đánh giá đầu tiên</Button>
+                <Empty description='Review feature coming soon' className='my-10' />
+                <Button type='primary'>Write First Review</Button>
               </div>
             </TabPane>
           </Tabs>
@@ -596,9 +650,9 @@ const ProductDetail = () => {
 
         <div className='bg-white rounded-lg shadow-sm mt-8 p-6'>
           <Title level={4} className='mb-4'>
-            Sản phẩm liên quan
+            Related Products
           </Title>
-          <Empty description='Tính năng sản phẩm liên quan đang được phát triển' className='my-10' />
+          <Empty description='Related products feature coming soon' className='my-10' />
         </div>
       </div>
     </div>

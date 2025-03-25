@@ -1,13 +1,26 @@
-import { Input, Button, Dropdown, Menu, Select } from 'antd';
-import { SearchOutlined, HeartOutlined, ShoppingCartOutlined, MenuOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  Input,
+  Button,
+  Dropdown,
+  Select,
+  Menu,
+} from 'antd';
+import {
+  SearchOutlined,
+  HeartOutlined,
+  MenuOutlined,
+  UserOutlined,
+  SettingOutlined,
+  LogoutOutlined,
+  DownOutlined,
+} from '@ant-design/icons';
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { DownOutlined } from '@ant-design/icons';
-import { setLanguage } from '@/context/slice/language';
 import { useTranslation } from 'react-i18next';
-import { SettingOutlined, LogoutOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { logoutSuccess } from '@/context/slice/auth';
+import { setLanguage } from '@/context/slice/language';
+import { CartIcon } from '@/pages/cart/components';
 
 const languages = [
   { key: 'en', label: 'English', flag: '🇬🇧' },
@@ -19,23 +32,31 @@ const Header = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const language = useSelector((state) => state.language.language);
+  const currentUser = useSelector((state) => state.auth.currentUser);
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const handleLanguageChange = (value) => {
     dispatch(setLanguage(value));
   };
 
-  const currentUser = useSelector((state) => state.auth.currentUser);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const handleLogout = () => {
+    dispatch(logoutSuccess());
+    navigate('/');
+  };
 
-  const userMenu = (
-    <Menu>
-      <Menu.Item key='settings' icon={<SettingOutlined />}>
-        {t('home.settings')}
-      </Menu.Item>
-      <Menu.Item key='logout' onClick={() => dispatch(logoutSuccess())} icon={<LogoutOutlined />}>
-        {t('home.logout')}
-      </Menu.Item>
-    </Menu>
-  );
+  const userMenuItems = [
+    {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: t('home.settings'),
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: t('home.logout'),
+      onClick: handleLogout,
+    },
+  ];
 
   return (
     <header className='sticky top-0 z-50 bg-white shadow-sm'>
@@ -54,7 +75,7 @@ const Header = () => {
 
           <div className='hidden md:flex flex-1 max-w-lg mx-4'>
             <Input
-              placeholder='Tìm kiếm sản phẩm...'
+              placeholder='Search for products...'
               prefix={<SearchOutlined className='text-gray-400' />}
               className='w-full rounded-full hover:border-gray-400 focus:border-gray-500'
             />
@@ -62,10 +83,15 @@ const Header = () => {
 
           <div className='flex items-center space-x-4 md:space-x-6'>
             <Button type='text' shape='circle' icon={<HeartOutlined className='text-gray-600 text-xl' />} />
-            <Button type='text' shape='circle' icon={<ShoppingCartOutlined className='text-gray-600 text-xl' />} />
+
+            {/* Cart Icon */}
+            <CartIcon />
 
             {currentUser ? (
-              <Dropdown overlay={userMenu} trigger={['click']}>
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                trigger={['click']}
+              >
                 <Button type='text' className='flex items-center space-x-2'>
                   <UserOutlined className='text-gray-600 text-xl' />
                   <span className='hidden md:inline'>{currentUser.name}</span>
@@ -100,7 +126,7 @@ const Header = () => {
           className={`mt-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-6 text-gray-600 
             overflow-x-auto transition-all duration-300 ${menuOpen ? 'block' : 'hidden md:flex'}`}
         >
-          {['Sản phẩm mới', 'Áo', 'Quần', 'Đầm/Váy', 'Phụ kiện', 'Sale'].map((item) => (
+          {['New Arrivals', 'Shirts', 'Pants', 'Dresses', 'Accessories', 'Sale'].map((item) => (
             <a key={item} href='#' className='hover:text-gray-900 whitespace-nowrap'>
               {item}
             </a>
