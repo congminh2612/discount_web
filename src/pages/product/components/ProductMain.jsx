@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Row,
   Col,
@@ -34,6 +34,7 @@ import {
   LineChartOutlined,
 } from '@ant-design/icons';
 import { getProductById } from '@/service/product';
+import { addItemToCart } from '@/context/slice/cart';
 import PriceTrendChart from './PriceTrendChart';
 
 const { Title, Text, Paragraph } = Typography;
@@ -42,9 +43,11 @@ const { TabPane } = Tabs;
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch(); // Thêm dòng này
 
   const currentUser = useSelector((state) => state.auth.currentUser);
   const userId = currentUser?.id || '';
+  const { status: cartStatus } = useSelector((state) => state.cart);
 
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -209,21 +212,31 @@ const ProductDetail = () => {
   };
 
   const handleAddToCart = () => {
+    if (!currentUser) {
+      message.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+      return;
+    }
+    
     if (!isInStock()) {
       message.error('Sản phẩm đã hết hàng');
       return;
     }
 
-    const productToAdd = {
-      id: product.id,
-      name: product.name,
-      price: getFinalPrice(),
-      image: selectedVariant?.image_url || product.image_url,
-      quantity: quantity,
-      variant_id: selectedVariant?.id,
+    const payload = {
+      user: { id: currentUser.id },
+      product_id: product.id,
+      variant_id: product.has_variant ? selectedVariant?.id : null,
+      quantity: quantity
     };
 
-    message.success('Đã thêm sản phẩm vào giỏ hàng');
+    dispatch(addItemToCart(payload))
+      .unwrap()
+      .then(() => {
+        message.success('Đã thêm sản phẩm vào giỏ hàng');
+      })
+      .catch((error) => {
+        message.error(error || 'Không thể thêm sản phẩm vào giỏ hàng');
+      });
   };
 
   const handleAddToWishlist = () => {

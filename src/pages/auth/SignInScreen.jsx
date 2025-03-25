@@ -5,7 +5,7 @@ import { GoogleOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginSuccess, logoutSuccess } from '@/context/slice/auth';
 
-const API_URL = 'http://localhost:8000/api/auth/sync-user';
+const API_URL = 'http://localhost:8005/api/auth/sync-user';
 
 const SignInScreen = () => {
   const dispatch = useDispatch();

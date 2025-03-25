@@ -1,13 +1,19 @@
-import React from 'react';
-import { Card, Badge, Typography, Tag, Button, Tooltip, Rate } from 'antd';
-import { ShoppingCartOutlined, HeartOutlined, EyeOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Card, Badge, Typography, Tag, Button, Tooltip, Rate, message } from 'antd';
+import { ShoppingCartOutlined, HeartOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { addItemToCart } from '@/context/slice/cart';
 
 const { Text } = Typography;
 const { Meta } = Card;
 
-const ProductCard = ({ product, onAddToCart, onToggleWishlist, onViewDetail }) => {
+const ProductCard = ({ product, onToggleWishlist, onViewDetail }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const { currentUser } = useSelector((state) => state.auth);
+  
   if (!product) return null;
 
   // Function to format currency
@@ -63,11 +69,47 @@ const ProductCard = ({ product, onAddToCart, onToggleWishlist, onViewDetail }) =
       </div>
     );
   };
-
+  
   // Calculate discount percentage for non-variant products
   const hasDiscount = product.original_price > product.final_price;
   const discount = product.original_price - product.final_price;
   const discountPercent = hasDiscount ? Math.round((discount / product.original_price) * 100) : 0;
+  
+  // Handle add to cart
+  const handleAddToCart = (product) => {
+    if (!currentUser) {
+      message.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+      return;
+    }
+    
+    setIsAddingToCart(true);
+    
+    // If product has variants, navigate to product detail page
+    if (product.has_variant) {
+      message.info('Vui lòng chọn biến thể sản phẩm');
+      navigate(`/product/${product.id}`);
+      setIsAddingToCart(false);
+      return;
+    }
+    
+    const payload = {
+      user: { id: currentUser.id },
+      product_id: product.id,
+      quantity: 1
+    };
+    
+    dispatch(addItemToCart(payload))
+      .unwrap()
+      .then(() => {
+        message.success('Đã thêm sản phẩm vào giỏ hàng');
+      })
+      .catch((error) => {
+        message.error(error || 'Không thể thêm sản phẩm vào giỏ hàng');
+      })
+      .finally(() => {
+        setIsAddingToCart(false);
+      });
+  };
 
   return (
     <Badge.Ribbon text={`-${discountPercent}%`} color='red' style={{ display: hasDiscount ? 'block' : 'none' }}>
@@ -93,23 +135,33 @@ const ProductCard = ({ product, onAddToCart, onToggleWishlist, onViewDetail }) =
                   <Button
                     shape='circle'
                     icon={<EyeOutlined />}
-                    onClick={() => onViewDetail(product.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewDetail(product.id);
+                    }}
                     className='bg-white hover:bg-blue-500 hover:text-white'
                   />
                 </Tooltip>
                 <Tooltip title='Thêm vào giỏ hàng'>
                   <Button
                     shape='circle'
-                    icon={<ShoppingCartOutlined />}
-                    onClick={() => onAddToCart(product)}
+                    icon={isAddingToCart ? <LoadingOutlined /> : <ShoppingCartOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(product);
+                    }}
                     className='bg-white hover:bg-blue-500 hover:text-white'
+                    disabled={isAddingToCart}
                   />
                 </Tooltip>
                 <Tooltip title='Thêm vào yêu thích'>
                   <Button
                     shape='circle'
                     icon={<HeartOutlined />}
-                    onClick={() => onToggleWishlist(product)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleWishlist(product);
+                    }}
                     className='bg-white hover:bg-blue-500 hover:text-white'
                   />
                 </Tooltip>
@@ -118,10 +170,27 @@ const ProductCard = ({ product, onAddToCart, onToggleWishlist, onViewDetail }) =
           </div>
         }
         actions={[
-          <Button type='text' icon={<EyeOutlined />} onClick={() => onViewDetail(product.id)} key='detail'>
+          <Button 
+            type='text' 
+            icon={<EyeOutlined />} 
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetail(product.id);
+            }} 
+            key='detail'
+          >
             Chi tiết
           </Button>,
-          <Button type='text' icon={<ShoppingCartOutlined />} onClick={() => onAddToCart(product)} key='add-to-cart'>
+          <Button 
+            type='text' 
+            icon={isAddingToCart ? <LoadingOutlined /> : <ShoppingCartOutlined />} 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddToCart(product);
+            }} 
+            key='add-to-cart'
+            disabled={isAddingToCart}
+          >
             Thêm vào giỏ
           </Button>,
         ]}
