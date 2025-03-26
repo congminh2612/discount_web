@@ -18,27 +18,20 @@ const ProductCard = ({ product, onAddToCart, onToggleWishlist, onViewDetail }) =
     }).format(amount);
   };
 
-  // Function to get price display for products with variants
   const getPriceDisplay = () => {
-    // If product has variants
     if (product.has_variant && product.variants && product.variants.length > 0) {
-      // Find min and max prices among variants
       const prices = product.variants.map((variant) => variant.final_price);
       const minPrice = Math.min(...prices);
       const maxPrice = Math.max(...prices);
-
-      // Check if all variant prices are the same
       const allPricesSame = prices.every((price) => price === minPrice);
 
       if (allPricesSame) {
-        // If all prices are the same, show single price
         return (
           <div className='flex items-center gap-2'>
             <Text className='text-lg font-bold text-blue-600'>{formatCurrency(minPrice)}</Text>
           </div>
         );
       } else {
-        // If prices vary, show price range
         return (
           <div className='flex items-center gap-2'>
             <Text className='text-lg font-bold text-blue-600'>Từ {formatCurrency(minPrice)}</Text>
@@ -47,7 +40,6 @@ const ProductCard = ({ product, onAddToCart, onToggleWishlist, onViewDetail }) =
       }
     }
 
-    // If no variants, show regular price
     const hasDiscount = product.original_price > product.final_price;
     const discount = product.original_price - product.final_price;
     const discountPercent = hasDiscount ? Math.round((discount / product.original_price) * 100) : 0;
@@ -64,7 +56,6 @@ const ProductCard = ({ product, onAddToCart, onToggleWishlist, onViewDetail }) =
     );
   };
 
-  // Calculate discount percentage for non-variant products
   const hasDiscount = product.original_price > product.final_price;
   const discount = product.original_price - product.final_price;
   const discountPercent = hasDiscount ? Math.round((discount / product.original_price) * 100) : 0;
@@ -84,7 +75,6 @@ const ProductCard = ({ product, onAddToCart, onToggleWishlist, onViewDetail }) =
               className='object-cover w-full h-full transition-transform duration-500 group-hover:scale-110'
               onError={(e) => {
                 e.target.onerror = null;
-                e.target.src = 'https://via.placeholder.com/300?text=No+Image';
               }}
             />
             <div className='absolute inset-0 bg-black bg-opacity-0 opacity-0 hover:bg-opacity-20 hover:opacity-100 transition-all duration-300 flex items-center justify-center'>

@@ -16,7 +16,11 @@ const SignInScreen = () => {
     try {
       const result = await signInWithPopup(auth, provider.setCustomParameters({ prompt: 'select_account' }));
       const idToken = await result.user.getIdToken();
-      console.log('🚀 ~ handleLogin ~ idToken:', idToken);
+      console.log('🚀 ~ handleLogin ~ idToken :', idToken);
+      console.log('🚀 ~ handleLogin ~ idToken :', idToken);
+      console.log('🚀 ~ handleLogin ~ idToken :', idToken);
+      console.log('🚀 ~ handleLogin ~ idToken :', idToken);
+      console.log('🚀 ~ handleLogin ~ idToken :', idToken);
 
       const response = await fetch(API_URL, {
         method: 'POST',

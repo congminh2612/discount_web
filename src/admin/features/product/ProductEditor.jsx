@@ -78,7 +78,6 @@ const ProductEditor = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch categories
   const { data: categories, isLoading: isLoadingCategories } = useQuery({
     queryKey: ['categories'],
     queryFn: getCategory,
@@ -134,14 +133,11 @@ const ProductEditor = () => {
       });
     }
 
-    // Lưu trữ giá trị gốc để sử dụng khi reset
     setOriginalValues(formValues);
 
-    // Reset form với giá trị mới
     reset(formValues);
   };
 
-  // Load product data when available
   useEffect(() => {
     if (productData?.data) {
       setFormDataFromProduct(productData.data);
@@ -149,7 +145,6 @@ const ProductEditor = () => {
     }
   }, [productData, reset]);
 
-  // Handle product loading error
   useEffect(() => {
     if (productError) {
       message.error('Không thể tải dữ liệu sản phẩm');
@@ -157,7 +152,6 @@ const ProductEditor = () => {
     }
   }, [productError]);
 
-  // Check if last variant has required fields filled
   const isLastVariantFilled = () => {
     if (!hasVariants || fields.length === 0) return true;
 
@@ -165,7 +159,6 @@ const ProductEditor = () => {
     return !!(lastVariant.sku && lastVariant.price && lastVariant.stock);
   };
 
-  // Add new variant
   const handleAddVariant = () => {
     if (!isLastVariantFilled()) {
       message.warning('Vui lòng điền đầy đủ thông tin SKU, giá và tồn kho cho biến thể hiện tại trước khi thêm mới.');
@@ -184,7 +177,6 @@ const ProductEditor = () => {
     });
   };
 
-  // Create product mutation
   const createMutation = useMutation({
     mutationFn: createProduct,
     onSuccess: () => {
@@ -201,7 +193,6 @@ const ProductEditor = () => {
     },
   });
 
-  // Update product mutation
   const updateMutation = useMutation({
     mutationFn: (data) => editProduct(id, data),
     onSuccess: () => {
@@ -218,7 +209,6 @@ const ProductEditor = () => {
     },
   });
 
-  // Form submission handler
   const onSubmit = async (data) => {
     setIsSubmitting(true);
 
@@ -266,13 +256,11 @@ const ProductEditor = () => {
     }
   };
 
-  // Reset form handler - chỉ cần reset form về giá trị ban đầu
   const handleReset = () => {
     reset(originalValues);
     message.info(isEditing ? 'Đã khôi phục dữ liệu ban đầu' : 'Đã xóa tất cả thông tin nhập');
   };
 
-  // Render variants section
   const renderVariants = () => (
     <div className='mt-4 p-4 bg-gray-50 border rounded-md'>
       <div className='flex justify-between items-center mb-4'>
@@ -448,10 +436,7 @@ const ProductEditor = () => {
     </div>
   );
 
-  // Check if page is loading
   const isLoading = isLoadingProduct || isLoadingCategories || isLoadingMarkets || loadingInitialData;
-
-  // Show loading state
   if (isLoading) {
     return (
       <div className='flex justify-center items-center h-64'>
@@ -467,11 +452,7 @@ const ProductEditor = () => {
           {isEditing ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm mới'}
         </h1>
         <Space>
-          <Button
-            onClick={handleReset}
-            icon={<UndoOutlined />}
-            disabled={!isDirty} // Sử dụng isDirty từ formState
-          >
+          <Button onClick={handleReset} icon={<UndoOutlined />} disabled={!isDirty}>
             Hoàn tác
           </Button>
           <Button
@@ -479,7 +460,7 @@ const ProductEditor = () => {
             onClick={handleSubmit(onSubmit)}
             icon={<SaveOutlined />}
             loading={isSubmitting}
-            disabled={!isDirty} // Sử dụng isDirty từ formState
+            disabled={!isDirty}
           >
             {isEditing ? 'Cập nhật' : 'Tạo mới'}
           </Button>
