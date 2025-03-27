@@ -1,13 +1,29 @@
-import { Input, Button, Dropdown, Menu, Select } from 'antd';
-import { SearchOutlined, HeartOutlined, ShoppingCartOutlined, MenuOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  Input,
+  Button,
+  Dropdown,
+  Menu,
+  Select,
+  Badge,
+  Tooltip,
+} from 'antd';
+import {
+  SearchOutlined,
+  HeartOutlined,
+  ShoppingCartOutlined,
+  MenuOutlined,
+  UserOutlined,
+  DownOutlined,
+  SettingOutlined,
+  LogoutOutlined,
+} from '@ant-design/icons';
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { DownOutlined } from '@ant-design/icons';
 import { setLanguage } from '@/context/slice/language';
 import { useTranslation } from 'react-i18next';
-import { SettingOutlined, LogoutOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { logoutSuccess } from '@/context/slice/auth';
+import { useCartSummary } from '@/hooks/useCartSummary';
 
 const languages = [
   { key: 'en', label: 'English', flag: '🇬🇧' },
@@ -16,15 +32,18 @@ const languages = [
 
 const Header = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const language = useSelector((state) => state.language.language);
+  const currentUser = useSelector((state) => state.auth.currentUser);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const { data: cartData } = useCartSummary();
+  const cartCount = cartData?.data?.item_count || 0;
+
   const handleLanguageChange = (value) => {
     dispatch(setLanguage(value));
   };
-
-  const currentUser = useSelector((state) => state.auth.currentUser);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const userMenu = (
     <Menu>
@@ -62,7 +81,14 @@ const Header = () => {
 
           <div className='flex items-center space-x-4 md:space-x-6'>
             <Button type='text' shape='circle' icon={<HeartOutlined className='text-gray-600 text-xl' />} />
-            <Button type='text' shape='circle' icon={<ShoppingCartOutlined className='text-gray-600 text-xl' />} />
+            <Badge count={cartCount} offset={[-2, 2]}>
+              <Button
+                type='text'
+                shape='circle'
+                icon={<ShoppingCartOutlined className='text-gray-600 text-xl' />}
+                onClick={() => navigate('/cart')}
+              />
+            </Badge>
 
             {currentUser ? (
               <Dropdown overlay={userMenu} trigger={['click']}>
