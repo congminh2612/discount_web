@@ -63,33 +63,45 @@ const ProductCard = ({ product, onToggleWishlist, onViewDetail }) => {
   };
 
   const getPriceDisplay = () => {
-    if (product.has_variant && product.variants?.length > 0) {
-      const prices = product.variants.map((v) => v.final_price);
-      const minPrice = Math.min(...prices);
-      const samePrice = prices.every((p) => p === minPrice);
-
-      return samePrice ? (
-        <Text className='text-lg font-bold text-blue-600'>{formatCurrency(minPrice)}</Text>
-      ) : (
-        <Text className='text-lg font-bold text-blue-600'>Từ {formatCurrency(minPrice)}</Text>
+    const hasDiscount = product.original_price > product.final_price;
+  
+    if (!product.has_variant) {
+      return (
+        <div className='flex items-center gap-2'>
+          <Text className='text-lg font-bold text-blue-600'>
+            {formatCurrency(product.final_price)}
+          </Text>
+          {hasDiscount && (
+            <Text delete className='text-sm text-gray-500'>
+              {formatCurrency(product.original_price)}
+            </Text>
+          )}
+        </div>
       );
     }
-
-    const hasDiscount = product.original_price > product.final_price;
-
+  
+    // Nếu có biến thể, dùng final_price của sản phẩm (đã tính sẵn ở backend là min(variant.final_price))
     return (
-      <div className='flex items-center gap-2'>
-        <Text className='text-lg font-bold text-blue-600'>
-          {formatCurrency(product.final_price)}
-        </Text>
+      <div>
         {hasDiscount && (
-          <Text delete className='text-sm text-gray-500'>
-            {formatCurrency(product.original_price)}
+          <div className='flex items-center gap-2'>
+            <Text className='text-lg font-bold text-blue-600'>
+              {formatCurrency(product.final_price)}
+            </Text>
+            <Text delete className='text-sm text-gray-500'>
+              {formatCurrency(product.original_price)}
+            </Text>
+          </div>
+        )}
+        {!hasDiscount && (
+          <Text className='text-lg font-bold text-blue-600'>
+            {formatCurrency(product.final_price)}
           </Text>
         )}
       </div>
     );
   };
+  
 
   const hasDiscount = product.original_price > product.final_price;
   const discountPercent = hasDiscount

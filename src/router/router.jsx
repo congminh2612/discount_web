@@ -22,6 +22,8 @@ import OrdersScreen from '@/pages/order/OrdersScreen';
 import OrderManager from '@/admin/features/order/OrderManager';
 import CustomerManager from '@/admin/features/customer/CustomerManager';
 import ProfileScreen from '@/pages/profile/ProfileScreen';
+import PriceListManager from '@/admin/features/price-list/PriceListManager';
+import PLEditor from '@/admin/features/price-list/components/PLEditor';
 
 const mainRouter = createBrowserRouter([
   {
@@ -125,6 +127,18 @@ const mainRouter = createBrowserRouter([
       {
         path: '/admin/customer',
         element: <CustomerManager />,
+      },
+      {
+        path: '/admin/discounts/pl',
+        element: <PriceListManager />,
+      },
+      {
+        path: '/admin/discount/pl/create',
+        element: <PLEditor />,
+      },
+      {
+        path: '/admin/discount/pl/edit/:id',
+        element: <PLEditor />,
       },
       {
         path: '*',

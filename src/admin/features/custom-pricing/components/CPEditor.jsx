@@ -113,6 +113,10 @@ const CPEditor = ({ initialData = {} }) => {
 
   const { data: markets } = useQuery({ queryKey: ['markets'], queryFn: getMarket });
   const { data: products } = useQuery({ queryKey: ['products'], queryFn: getProduct });
+  const productsNoVariant = useMemo(() => {
+    return products?.data?.filter((p) => !p.has_variant) || [];
+  }, [products]);
+
   const { data: customers } = useQuery({
     queryKey: ['customers'],
     queryFn: getCustomer,
@@ -144,6 +148,17 @@ const CPEditor = ({ initialData = {} }) => {
   const allProductIds = useMemo(() => products?.data?.map((p) => p.id) || [], [products]);
 
   const onSubmit = async (data) => {
+    // Lấy danh sách sản phẩm đã chọn
+    const selectedProductDetails = products?.data?.filter((p) =>
+      data.selected_products.includes(p.id)
+    ) || [];
+  
+    // Tạo amounts với giá hợp lệ (tránh null)
+    const amounts = selectedProductDetails.map((p) => ({
+      product_id: p.id,
+      amount: p.original_price || p.price || 0, // ✅ fallback giá mặc định
+    }));
+  
     const formattedData = {
       title: data.title,
       description: data.description ?? '',
@@ -151,18 +166,22 @@ const CPEditor = ({ initialData = {} }) => {
       discount_value: Number(data.discount_value),
       market_ids: data.selected_markets,
       customer_ids: data.selected_customers,
-      variant_ids: [],
+      variant_ids: [], // chưa hỗ trợ variant ở đây
       product_ids: data.selected_products,
       start_date: data.start_date,
       end_date: data.end_date,
+      is_price_list: false,
+      amounts, // ✅ phải có để rule hiện đúng
     };
-
+  
     if (id) {
       updateCPMutation.mutate(formattedData);
     } else {
       createCPMutation.mutate(formattedData);
     }
   };
+  
+  
 
   useEffect(() => {
     if (!id) {
@@ -437,23 +456,26 @@ const CPEditor = ({ initialData = {} }) => {
                     <Radio value='specific'>Sản phẩm cụ thể</Radio>
                   </Radio.Group>
                   {product_type === 'specific' && (
-                    <div className='p-4 max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg'>
-                      <label className='ml-4 font-medium text-base'>Áp dụng cho sản phẩm</label>
-                      <Form.Item
-                        validateStatus={errors.selected_products ? 'error' : ''}
-                        help={errors.selected_products?.message}
-                      >
-                        <Controller
-                          name='selected_products'
-                          control={control}
-                          rules={{
-                            validate: (value) => value?.length > 0 || 'Chọn ít nhất 1 sản phẩm',
-                          }}
-                          render={({ field }) => <ProductSelector products={products?.data} {...field} />}
-                        />
-                      </Form.Item>
-                    </div>
-                  )}
+  <div className='p-4 max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg'>
+    <label className='ml-4 font-medium text-base'>Áp dụng cho sản phẩm</label>
+    <Form.Item
+      validateStatus={errors.selected_products ? 'error' : ''}
+      help={errors.selected_products?.message}
+    >
+      <Controller
+        name='selected_products'
+        control={control}
+        rules={{
+          validate: (value) => value?.length > 0 || 'Chọn ít nhất 1 sản phẩm',
+        }}
+        render={({ field }) => (
+          <ProductSelector products={productsNoVariant} {...field} />
+        )}
+      />
+    </Form.Item>
+  </div>
+)}
+
                 </>
               )}
             />

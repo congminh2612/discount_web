@@ -10,18 +10,23 @@ const { confirm } = Modal;
 const CPManager = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data, isLoading } = useQuery({ queryKey: ['rules'], queryFn: getRules });
-
+  const { data, isLoading } = useQuery({
+    queryKey: ['cp-rules'], // ✅ tách biệt key
+    queryFn: () => getRules(false), // lấy custom pricing
+  });
+  
+  
   const mutation = useMutation({
     mutationFn: deleteRule,
     onSuccess: () => {
       message.success('Xóa rule thành công!');
-      queryClient.invalidateQueries(['rules']);
+      queryClient.invalidateQueries(['cp-rules']); // ✅ đúng key
     },
     onError: () => {
       message.error('Xóa rule thất bại!');
     },
   });
+  
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRule, setSelectedRule] = useState(null);

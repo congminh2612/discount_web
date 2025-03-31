@@ -8,6 +8,7 @@ const getProduct = async () => {
     throw new Error(error);
   }
 };
+
 const getProductApplyCP = async (userId, options = {}) => {
   try {
     const { page = 1, limit = 10, search = '', categoryId = '' } = options;
@@ -19,22 +20,23 @@ const getProductApplyCP = async (userId, options = {}) => {
     if (search) params.append('search', search);
     if (categoryId) params.append('categoryId', categoryId);
 
-    const queryString = params.toString();
-    const res = await apiClient.get(`/api/product?${queryString}`);
+    const res = await apiClient.get(`/api/product?${params.toString()}`);
     return res.data;
   } catch (error) {
     throw new Error(error.message || 'Không thể tải sản phẩm');
   }
 };
 
-const getProductById = async (productId) => {
+const getProductById = async (productId, userId) => {
   try {
-    const res = await apiClient.get(`/api/product/${productId}`);
+    const query = userId ? `?userId=${userId}` : '';
+    const res = await apiClient.get(`/api/product/${productId}${query}`);
     return res.data;
   } catch (error) {
     throw new Error(error);
   }
 };
+
 const getProductApplyCPById = async (productId, userId) => {
   try {
     const res = await apiClient.get(`/api/product/${productId}?userId=${userId}`);

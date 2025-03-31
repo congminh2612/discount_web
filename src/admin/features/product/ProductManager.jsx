@@ -48,6 +48,8 @@ import { useNavigate } from 'react-router-dom';
 import { getCategory } from '../../../service/category';
 import Loading from '../../../components/loading/Loading';
 import { motion } from 'framer-motion';
+import { useSelector } from 'react-redux';
+import { getProductApplyCP } from '@/service/product';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -67,7 +69,9 @@ const ProductManager = () => {
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [filterDrawerVisible, setFilterDrawerVisible] = useState(false);
-
+  const currentUser = useSelector((state) => state.auth.currentUser);
+  const userId = currentUser?.id;
+  
   useEffect(() => {
     if (screens.xs && viewMode === 'table') {
       setViewMode('list');
@@ -80,9 +84,11 @@ const ProductManager = () => {
   });
 
   const { data: products, isLoading: productsLoading } = useQuery({
-    queryKey: ['product'],
-    queryFn: () => getProduct([]),
+    queryKey: ['product', userId],
+    queryFn: () => getProductApplyCP(userId),
+    enabled: !!userId,
   });
+  
 
   const isLoading = categoriesLoading || productsLoading;
 
@@ -197,7 +203,10 @@ const ProductManager = () => {
     setSelectedProduct(product);
     setDetailsVisible(true);
   };
-
+  useEffect(() => {
+    console.log('🧪 selectedProduct:', selectedProduct);
+  }, [selectedProduct]);
+  
   const variantColumns = [
     {
       title: 'SKU',
@@ -297,25 +306,30 @@ const ProductManager = () => {
     {
       title: 'Giá',
       key: 'price',
-      render: (_, record) => (
-        <div>
-          {record.has_variant ? (
-            <Tag icon={<DollarOutlined />} color='processing'>
-              Nhiều giá
-            </Tag>
-          ) : (
+      render: (_, record) => {
+        if (record.has_variant) {
+          const variantPrices = record.variants?.map((v) => parseFloat(v.final_price)).filter((p) => !isNaN(p));
+          const minPrice = variantPrices?.length > 0 ? Math.min(...variantPrices) : 0;
+    
+          return (
             <div>
-              <Text delete type='secondary' className='block'>
-                {formatVND(record.original_price)}
-              </Text>
-              <Text strong className='block text-red-500'>
-                {formatVND(record.final_price)}
-              </Text>
+              <Text type='secondary'>Giá từ:</Text>{' '}
+              <Text strong className='text-red-600 ml-1'>{formatVND(minPrice)}</Text>
             </div>
-          )}
-        </div>
-      ),
+          );
+        } else {
+          return record.original_price !== record.final_price ? (
+            <div>
+              <Text delete type='secondary'>{formatVND(record.original_price)}</Text>
+              <Text strong className='text-red-600 block'>{formatVND(record.final_price)}</Text>
+            </div>
+          ) : (
+            <Text strong>{formatVND(record.final_price)}</Text>
+          );
+        }
+      },
     },
+    
     {
       title: 'Tồn kho',
       key: 'stock',
@@ -412,6 +426,16 @@ const ProductManager = () => {
 
         {!selectedProduct.has_variant ? (
           <div className='mb-6'>
+            <Row gutter={16} className='mb-4'>
+  <Col span={24}>
+    <Statistic
+      title='Mã SKU'
+      value={selectedProduct.sku || 'Không có'}
+      prefix={<BarcodeOutlined />}
+    />
+  </Col>
+</Row>
+
             <Row gutter={16}>
               <Col span={screens.xs ? 24 : 12} className={screens.xs ? 'mb-4' : ''}>
                 <Statistic

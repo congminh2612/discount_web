@@ -1,9 +1,10 @@
 import { Table, Checkbox, Image, Typography } from 'antd';
 
-const ProductListSelector = ({ value = [], onChange, products }) => {
+const ProductSelector = ({ value = [], onChange, products }) => {
   const toggleProduct = (productId) => {
-    const newSelected = value.includes(productId) ? value.filter((id) => id !== productId) : [...value, productId];
-
+    const newSelected = value.includes(productId)
+      ? value.filter((id) => id !== productId)
+      : [...value, productId];
     onChange(newSelected);
   };
 
@@ -12,7 +13,13 @@ const ProductListSelector = ({ value = [], onChange, products }) => {
       title: 'Chọn',
       dataIndex: 'id',
       key: 'id',
-      render: (id) => <Checkbox checked={value.includes(id)} onChange={() => toggleProduct(id)} />,
+      render: (id, record) => (
+        <Checkbox
+          checked={value.includes(id)}
+          onChange={() => toggleProduct(id)}
+          disabled={record.has_variant}
+        />
+      ),
     },
     {
       title: 'Sản phẩm',
@@ -21,20 +28,26 @@ const ProductListSelector = ({ value = [], onChange, products }) => {
       render: (_, record) => (
         <div className='flex items-center space-x-3'>
           <Image src={record.image_url} width={50} height={50} className='rounded-md object-cover' />
-          <Typography.Text strong>{record.name}</Typography.Text>
+          <Typography.Text strong>
+            {record.name}
+            {record.has_variant && (
+              <span className='ml-2 text-xs text-gray-500'>(Có biến thể – không áp dụng)</span>
+            )}
+          </Typography.Text>
         </div>
       ),
     },
-
     {
-      title: 'Giá ',
+      title: 'Giá',
       dataIndex: 'original_price',
       key: 'original_price',
-      render: (price) => <span className='text-red-500'>{Number(price).toLocaleString()}đ</span>,
+      render: (price) => (
+        <span className='text-red-500'>{Number(price).toLocaleString()}đ</span>
+      ),
     },
   ];
 
   return <Table columns={columns} dataSource={products} rowKey='id' pagination={false} />;
 };
 
-export default ProductListSelector;
+export default ProductSelector;
