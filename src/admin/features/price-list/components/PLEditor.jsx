@@ -131,6 +131,15 @@ const PLEditor = () => {
   }, [marketData, id, setValue, watch]);
 
   const onSubmit = (data) => {
+    const validAmounts = customPrices.filter(
+      (p) => p.amount !== null && p.amount !== undefined && Number(p.amount) > 0
+    );
+  
+    if (validAmounts.length === 0) {
+      message.error('Vui lòng nhập giá cố định cho ít nhất 1 sản phẩm hoặc biến thể');
+      return;
+    }
+  
     const payload = {
       title: data.title,
       description: data.description || '',
@@ -140,18 +149,20 @@ const PLEditor = () => {
         data.market_type === 'all'
           ? marketData?.data?.map((m) => m.id) || []
           : data.selected_markets,
-      product_ids: customPrices.filter((p) => !p.variant_id).map((p) => p.product_id),
-      variant_ids: customPrices.filter((p) => p.variant_id).map((p) => p.variant_id),
-      amounts: customPrices,
+      product_ids: validAmounts.filter((p) => !p.variant_id).map((p) => p.product_id),
+      variant_ids: validAmounts.filter((p) => p.variant_id).map((p) => p.variant_id),
+      amounts: validAmounts, // ✅ chỉ gửi các dòng có amount hợp lệ
       discount_type: 'fixed price',
       discount_value: 0,
       priority: 10,
       is_price_list: true,
     };
-
+  
     if (id) updateMutation.mutate(payload);
     else createMutation.mutate(payload);
   };
+  
+  
 
   return (
     <div className='max-w-[1000px] mx-auto px-6 pt-8 pb-16'>
@@ -162,13 +173,14 @@ const PLEditor = () => {
             Quay lại
           </Button>
           <Button
-            type='primary'
-            icon={<SaveOutlined />}
-            onClick={handleSubmit(onSubmit)}
-            loading={createMutation.isLoading || updateMutation.isLoading}
-          >
-            {id ? 'Cập nhật' : 'Lưu'}
-          </Button>
+  type='primary'
+  icon={<SaveOutlined />}
+  onClick={handleSubmit(onSubmit)}
+  disabled={customPrices.filter(p => Number(p.amount) > 0).length === 0}
+>
+  {id ? 'Cập nhật' : 'Lưu'}
+</Button>
+
         </div>
       </div>
 

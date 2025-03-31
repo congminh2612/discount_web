@@ -61,11 +61,17 @@ const ProductDetail = () => {
   } = useQuery({
     queryKey: ['product', id, userId],
     queryFn: () => getProductApplyCPById(id, userId),
-    enabled: !!id,
-  });
+    enabled: !!id && !!userId,
+    });
 
   const product = productData?.data;
-
+  console.log('🟡 [DEBUG] Product:', product);
+  console.log('🟡 [DEBUG] Product final_price:', product?.final_price);
+  console.log('🟡 [DEBUG] Product appliedRule:', product?.appliedRule);
+  console.log('🟡 [DEBUG] Selected variant:', selectedVariant);
+  console.log('🟡 [DEBUG] Selected variant final_price:', selectedVariant?.final_price);
+  console.log('🟡 [DEBUG] Selected variant appliedRule:', selectedVariant?.appliedRule);
+  
   useEffect(() => {
     if (product?.has_variant && product.variants?.length > 0) {
       setAvailableVariants(product.variants);
@@ -481,19 +487,20 @@ const ProductDetail = () => {
 
   </div>
 
-  {product.appliedRule && (
-    <div className='mt-2 flex items-center'>
-      <Tag color='gold' className='mr-2'>
-        Khuyến mãi
-      </Tag>
-      <Text className='text-sm'>
-        {product.appliedRule.name}
-        {product.appliedRule.discount_type === 'percentage'
-          ? ` (-${product.appliedRule.discount_value}%)`
-          : ` (-${formatCurrency(product.appliedRule.discount_value)})`}
-      </Text>
-    </div>
-  )}
+  {(selectedVariant?.appliedRule || product.appliedRule) && (
+  <div className='mt-2 flex items-center'>
+    <Tag color='gold' className='mr-2'>
+      Khuyến mãi
+    </Tag>
+    <Text className='text-sm'>
+      {(selectedVariant?.appliedRule || product.appliedRule).name}
+      {(selectedVariant?.appliedRule || product.appliedRule).discount_type === 'percentage'
+        ? ` (-${(selectedVariant?.appliedRule || product.appliedRule).discount_value}%)`
+        : ` (-${formatCurrency((selectedVariant?.appliedRule || product.appliedRule).discount_value)})`}
+    </Text>
+  </div>
+)}
+
 </div>
 
 

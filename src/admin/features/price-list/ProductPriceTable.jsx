@@ -48,7 +48,7 @@ const ProductPriceTable = ({ products = [], customPrices = [], setCustomPrices }
 
     if (checked) {
       updatedKeys.push(key);
-      handleAmountChange(item, getAmount(item) ?? 0);
+      handleAmountChange(item, getAmount(item));
     } else {
       updatedKeys = updatedKeys.filter((k) => k !== key);
       setCustomPrices((prev) =>
@@ -127,7 +127,7 @@ const ProductPriceTable = ({ products = [], customPrices = [], setCustomPrices }
         <InputNumber
           min={0}
           value={getAmount(record)}
-          onChange={(value) => handleAmountChange(record, value)}
+          onChange={(value) => handleAmountChange(record, Number(value) || 0)}
           disabled={!selectedKeys.includes(record.key)}
           style={{ width: '100%' }}
           placeholder='Nhập giá'

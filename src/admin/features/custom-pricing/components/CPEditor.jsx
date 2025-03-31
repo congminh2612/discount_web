@@ -21,7 +21,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 const transformData = (data) => {
   return {
     title: data.title || '',
-    priority: data.priority || 1,
     discount_type: data.discount_type || 'percentage',
     discount_value: Number(data.discount_value) || 0,
     start_date: dayjs(data.start_date),
@@ -49,7 +48,6 @@ const CPEditor = ({ initialData = {} }) => {
 
   const CPFormSchema = z.object({
     title: z.string().min(1, { message: 'Tên chương trình không được để trống' }),
-    priority: z.number().min(0, { message: 'Priority phải lớn hơn hoặc bằng 0' }),
     discount_type: z.string(),
     discount_value: z.number().min(0, { message: 'Giá trị giảm giá phải lớn hơn hoặc bằng 0' }),
     start_date: z.coerce.date(),
@@ -66,7 +64,6 @@ const CPEditor = ({ initialData = {} }) => {
       ? transformData(cpEditData.data)
       : {
           title: '',
-          priority: 1,
           discount_type: 'percentage',
           discount_value: 0,
           start_date: dayjs(),
@@ -146,19 +143,7 @@ const CPEditor = ({ initialData = {} }) => {
   const allMarkets = useMemo(() => markets?.data?.map((m) => m.id) || [], [markets]);
   const allCustomerIds = useMemo(() => customers?.data?.map((c) => c.id) || [], [customers]);
   const allProductIds = useMemo(() => products?.data?.map((p) => p.id) || [], [products]);
-
   const onSubmit = async (data) => {
-    // Lấy danh sách sản phẩm đã chọn
-    const selectedProductDetails = products?.data?.filter((p) =>
-      data.selected_products.includes(p.id)
-    ) || [];
-  
-    // Tạo amounts với giá hợp lệ (tránh null)
-    const amounts = selectedProductDetails.map((p) => ({
-      product_id: p.id,
-      amount: p.original_price || p.price || 0, // ✅ fallback giá mặc định
-    }));
-  
     const formattedData = {
       title: data.title,
       description: data.description ?? '',
@@ -166,12 +151,11 @@ const CPEditor = ({ initialData = {} }) => {
       discount_value: Number(data.discount_value),
       market_ids: data.selected_markets,
       customer_ids: data.selected_customers,
-      variant_ids: [], // chưa hỗ trợ variant ở đây
       product_ids: data.selected_products,
+      // variant_ids: [], // nếu sau này có thể mở rộng
       start_date: data.start_date,
       end_date: data.end_date,
-      is_price_list: false,
-      amounts, // ✅ phải có để rule hiện đúng
+      is_price_list: false, // ✅ đúng cho Custom Pricing
     };
   
     if (id) {
@@ -180,6 +164,8 @@ const CPEditor = ({ initialData = {} }) => {
       createCPMutation.mutate(formattedData);
     }
   };
+  
+  
   
   
 
@@ -253,17 +239,6 @@ const CPEditor = ({ initialData = {} }) => {
                 </Form.Item>
               )}
             />
-            <Controller
-              name='priority'
-              control={control}
-              rules={{ min: { value: 1, message: 'Priority phải lớn hơn hoặc bằng 0' } }}
-              render={({ field }) => (
-                <Form.Item label={t('cp.priority')} required>
-                  <Input {...field} type='number' min={0} />
-                </Form.Item>
-              )}
-            />
-
             <div className='grid grid-cols-2 gap-4'>
               <Controller
                 name='start_date'
@@ -309,7 +284,7 @@ const CPEditor = ({ initialData = {} }) => {
               render={({ field }) => (
                 <Radio.Group {...field} className='flex flex-col space-y-3'>
                   <Radio value='percentage'>{t('cp.percentage_discount')}</Radio>
-                  <Radio value='fixed'>{t('cp.amount_discount')}</Radio>
+                  <Radio value='fixed price'>{t('cp.amount_discount')}</Radio>
                 </Radio.Group>
               )}
             />
@@ -530,7 +505,7 @@ const CPEditor = ({ initialData = {} }) => {
                   discountType={discount_type}
                   discountValue={discount_value}
                   customers={selected_customers}
-                  products={products.data}
+                  products={productsNoVariant}
                   productSelected={selected_products}
                 />
               )}

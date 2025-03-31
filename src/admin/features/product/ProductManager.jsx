@@ -85,9 +85,11 @@ const ProductManager = () => {
 
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['product', userId],
-    queryFn: () => getProductApplyCP(userId),
-    enabled: !!userId,
+    queryFn: () => getProductApplyCP({ userId }),
+    enabled: !!userId, // đảm bảo chỉ gọi khi đã có userId
   });
+  
+  
   
 
   const isLoading = categoriesLoading || productsLoading;

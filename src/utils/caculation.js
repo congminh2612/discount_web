@@ -7,7 +7,7 @@ const calculateCPPrice = (price, discountValue, discountType) => {
 
   if (discountType === 'percentage') {
     return Math.max((original * (100 - discount)) / 100, 0);
-  } else if (discountType === 'fixed') {
+  } else if (discountType === 'fixed price') {
     return Math.max(original - discount, 0);
   }
 
