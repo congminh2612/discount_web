@@ -36,9 +36,11 @@ import {
 } from '@ant-design/icons';
 import TextArea from 'antd/es/input/TextArea';
 import { useNavigate } from 'react-router-dom';
-import { cartService } from '@/service/cart';
 import { useSelector } from 'react-redux';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as discountService from '@/service/discount'; // thay vì gọi từ cartService
+import { useRef } from 'react'; // THÊM DÒNG NÀY
+import { cartService } from '@/service/cart'; // ⚠️ thiếu dòng này
 
 const CartScreen = () => {
   const navigate = useNavigate();
@@ -48,8 +50,12 @@ const CartScreen = () => {
   const currentUser = useSelector((state) => state.auth.currentUser);
   const userId = currentUser?.id;
   const queryClient = useQueryClient();
-
-
+  const hasAppliedDiscount = useRef(false);
+  const cartQueryKey = ['cart', userId]; 
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const [availableCodes, setAvailableCodes] = useState([]);
+  
+  const [wantApplyDiscount, setWantApplyDiscount] = useState(false); // Thêm state điều khiển
 
 
   const [progressPercent, setProgressPercent] = useState(0);
@@ -59,8 +65,8 @@ const CartScreen = () => {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['cart', userId],
-    queryFn: () => cartService.getCart(),
+    queryKey: ['cart', userId, { apply_discount: wantApplyDiscount, selected_item_ids: selectedItems }],
+    queryFn: () => cartService.getCart(wantApplyDiscount, selectedItems),
     enabled: !!userId,
   });
   
@@ -98,19 +104,56 @@ const selectedTotal = selectedSubtotal;
     }
   };
   
-  const handleApplyCoupon = async () => {
-    if (!couponCode) {
+  const handleApplyCoupon = async (code = couponCode) => {
+    if (!code) {
       message.warning('Vui lòng nhập mã giảm giá');
       return;
     }
+  
     try {
-      await cartService.applyDiscount(couponCode);
-      message.success('Áp dụng mã giảm giá thành công');
-      queryClient.invalidateQueries(['cart']);
+      const result = await await cartService.applyDiscount({
+        discount_code: code,
+        selected_item_ids: selectedItems, // ✅ thêm vào đây
+      });
+            if (result?.success) {
+        message.success(result.message || 'Áp dụng mã giảm giá thành công');
+        setDiscountApplied(true);
+        setWantApplyDiscount(true); // ✅ GỌI LẠI getCart với ?apply_discount=true
+        queryClient.invalidateQueries(['cart', userId, { apply_discount: true }]);
+      } else {
+        message.error(result?.message || 'Không áp dụng được mã giảm giá');
+      }
     } catch (err) {
-      message.error('Không áp dụng được mã giảm giá');
+      message.error(err?.response?.data?.message || 'Có lỗi khi áp dụng mã');
     }
   };
+  
+  
+  
+  
+  useEffect(() => {
+    if (cart?.discount_code && !discountApplied) {
+      setCouponCode(cart.discount_code); // ✅ Gán lại input nếu cart có sẵn mã
+    }
+  }, [cart]);
+
+  useEffect(() => {
+    if (userId) {
+      discountService.getAvailableDiscounts(userId).then((res) => {
+        if (res?.success) {
+          setAvailableCodes(res.data);
+        }
+      }).catch((err) => {
+        console.error('Lỗi khi lấy danh sách mã:', err.message);
+      });
+    }
+  }, [userId]);
+  
+  
+  
+  
+  
+  
   
 
   const handleUpdateNote = async () => {
@@ -129,11 +172,17 @@ const selectedTotal = selectedSubtotal;
     try {
       await cartService.removeDiscount();
       message.success('Đã hủy mã giảm giá');
-      queryClient.invalidateQueries(['cart']);
+      setCouponCode('');
+      setDiscountApplied(false);
+      setWantApplyDiscount(false); // ✅ KHÔNG áp lại discount
+      queryClient.invalidateQueries(['cart', userId, { apply_discount: false }]);
     } catch (err) {
       message.error('Không thể hủy mã giảm giá');
     }
   };
+  
+  
+  
   const handleSelectItem = (itemId) => {
     setSelectedItems((prev) => {
       if (prev.includes(itemId)) {
@@ -542,44 +591,34 @@ const selectedTotal = selectedSubtotal;
                   </div>
                 ) : (
                   <div>
-                    <div className='flex'>
-                      <Input
-                        placeholder='Nhập mã giảm giá'
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                        prefix={<TagOutlined className='text-gray-400' />}
-                        className='rounded-l-lg'
-                      />
-                      <Button type='primary' onClick={handleApplyCoupon} className='rounded-r-lg'>
-                        Áp dụng
-                      </Button>
-                    </div>
-                    <div className='mt-3 flex flex-wrap gap-2'>
-                      <Tag
-                        color='orange'
-                        className='cursor-pointer hover:opacity-80'
-                        onClick={() => setCouponCode('SUMMER2025')}
-                      >
-                        SUMMER2025
-                      </Tag>
-                      <Tag
-                        color='blue'
-                        className='cursor-pointer hover:opacity-80'
-                        onClick={() => setCouponCode('WELCOME10')}
-                      >
-                        WELCOME10
-                      </Tag>
-                      <Tag
-                        color='green'
-                        className='cursor-pointer hover:opacity-80'
-                        onClick={() => setCouponCode('FREESHIP')}
-                      >
-                        FREESHIP
-                      </Tag>
-                    </div>
-                    <Typography.Text type='secondary' className='text-xs mt-2 block'>
-                      Nhấp vào mã để áp dụng hoặc nhập mã khác
-                    </Typography.Text>
+<div className='flex'>
+  <Input
+    placeholder='Nhập mã giảm giá'
+    value={couponCode}
+    onChange={(e) => setCouponCode(e.target.value)}
+    prefix={<TagOutlined className='text-gray-400' />}
+    className='rounded-l-lg'
+  />
+  <Button type='primary' onClick={() => handleApplyCoupon()} className='rounded-r-lg'>
+    Áp dụng
+  </Button>
+</div>
+<div className='mt-3 flex flex-wrap gap-2'>
+  {availableCodes.map((code) => (
+    <Tag
+      key={code}
+      color='blue'
+      className='cursor-pointer hover:opacity-80'
+      onClick={() => setCouponCode(code)}
+    >
+      {code}
+    </Tag>
+  ))}
+</div>
+<Typography.Text type='secondary' className='text-xs mt-2 block'>
+  Nhấp vào mã để sao chép, sau đó nhấn "Áp dụng"
+</Typography.Text>
+
                   </div>
                 )}
               </Card>

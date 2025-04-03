@@ -1,10 +1,22 @@
 import apiClient from '../config/axios.config';
 
 export const cartService = {
-  getCart: async () => {
-    const response = await apiClient.get('/api/cart');
+ 
+  getCart: async (applyDiscount = false, selectedItemIds = []) => {
+    let url = `/api/cart`;
+    if (applyDiscount) {
+      const query = new URLSearchParams();
+      query.append('apply_discount', 'true');
+      if (selectedItemIds.length > 0) {
+        query.append('selected_item_ids', selectedItemIds.join(','));
+      }
+      url += `?${query.toString()}`;
+    }
+    const response = await apiClient.get(url);
     return response.data;
   },
+  
+  
 
   addToCart: async (productData) => {
     const response = await apiClient.post('/api/cart', productData);
@@ -35,13 +47,19 @@ export const cartService = {
   },
   
 
-  applyDiscount: async (discountCode) => {
-    const response = await apiClient.post('/api/cart/apply', { discount_code: discountCode });
+  applyDiscount: async ({ discount_code, selected_item_ids }) => {
+    const response = await apiClient.post('/api/cart/apply', {
+      discount_code,
+      selected_item_ids,
+    });
     return response.data;
   },
+  
+  
 
   removeDiscount: async () => {
     const response = await apiClient.delete('/api/cart/apply');
     return response.data;
   },
 };
+
