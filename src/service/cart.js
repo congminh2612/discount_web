@@ -4,18 +4,26 @@ export const cartService = {
  
   getCart: async (applyDiscount = false, selectedItemIds = []) => {
     let url = `/api/cart`;
+    const query = new URLSearchParams();
+    
+    // Luôn truyền apply_discount nếu được chỉ định
     if (applyDiscount) {
-      const query = new URLSearchParams();
       query.append('apply_discount', 'true');
-      if (selectedItemIds.length > 0) {
-        query.append('selected_item_ids', selectedItemIds.join(','));
-      }
+    }
+    
+    // Luôn truyền selected_item_ids nếu có
+    if (selectedItemIds && selectedItemIds.length > 0) {
+      query.append('selected_item_ids', selectedItemIds.join(','));
+    }
+    
+    // Chỉ thêm query string nếu có tham số
+    if (query.toString()) {
       url += `?${query.toString()}`;
     }
+    
     const response = await apiClient.get(url);
     return response.data;
   },
-  
   
 
   addToCart: async (productData) => {
@@ -48,6 +56,10 @@ export const cartService = {
   
 
   applyDiscount: async ({ discount_code, selected_item_ids }) => {
+    if (!selected_item_ids || selected_item_ids.length === 0) {
+      throw new Error('Vui lòng chọn ít nhất một sản phẩm để áp dụng mã giảm giá');
+    }
+    
     const response = await apiClient.post('/api/cart/apply', {
       discount_code,
       selected_item_ids,

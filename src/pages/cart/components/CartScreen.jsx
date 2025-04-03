@@ -65,7 +65,7 @@ const CartScreen = () => {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['cart', userId, { apply_discount: wantApplyDiscount, selected_item_ids: selectedItems }],
+    queryKey: ['cart', userId, { apply_discount: wantApplyDiscount, selected_item_ids: selectedItems.join(',') }],
     queryFn: () => cartService.getCart(wantApplyDiscount, selectedItems),
     enabled: !!userId,
   });
@@ -76,9 +76,11 @@ const CartScreen = () => {
 const selectedCartItems = items.filter((item) => selectedItems.includes(item.id));
 const selectedSubtotal = selectedCartItems.reduce((sum, item) => sum + parseFloat(item.total_price || 0), 0);
 
-const selectedDiscount = selectedCartItems.reduce((sum, item) => sum + parseFloat(item.discount_amount || 0), 0);
+// Sử dụng discount_amount từ API nếu có mã giảm giá
+const discountAmount = cart.discount_code ? parseFloat(cart.discount_amount || 0) : 0;
 
-const selectedTotal = selectedSubtotal;
+// Tính tổng cộng sau khi trừ giảm giá
+const finalTotal = Math.max(selectedSubtotal - discountAmount, 0);
 
   const handleQuantityChange = async (itemId, change) => {
     const item = items.find((i) => i.id === itemId);
@@ -109,17 +111,23 @@ const selectedTotal = selectedSubtotal;
       message.warning('Vui lòng nhập mã giảm giá');
       return;
     }
+    
+    if (selectedItems.length === 0) {
+      message.warning('Vui lòng chọn ít nhất một sản phẩm để áp dụng mã giảm giá');
+      return;
+    }
   
     try {
-      const result = await await cartService.applyDiscount({
+      const result = await cartService.applyDiscount({
         discount_code: code,
-        selected_item_ids: selectedItems, // ✅ thêm vào đây
+        selected_item_ids: selectedItems,
       });
-            if (result?.success) {
+      
+      if (result?.success) {
         message.success(result.message || 'Áp dụng mã giảm giá thành công');
         setDiscountApplied(true);
-        setWantApplyDiscount(true); // ✅ GỌI LẠI getCart với ?apply_discount=true
-        queryClient.invalidateQueries(['cart', userId, { apply_discount: true }]);
+        setWantApplyDiscount(true);
+        queryClient.invalidateQueries(['cart', userId, { apply_discount: true, selected_item_ids: selectedItems }]);
       } else {
         message.error(result?.message || 'Không áp dụng được mã giảm giá');
       }
@@ -127,8 +135,6 @@ const selectedTotal = selectedSubtotal;
       message.error(err?.response?.data?.message || 'Có lỗi khi áp dụng mã');
     }
   };
-  
-  
   
   
   useEffect(() => {
@@ -623,7 +629,7 @@ const selectedTotal = selectedSubtotal;
                 )}
               </Card>
 
-              <Card className='rounded-xl border-0 shadow-sm'>
+              <Card className="rounded-xl border-0 shadow-sm">
   <Typography.Title level={4} className='mb-6'>
     Thông tin thanh toán
   </Typography.Title>
@@ -636,17 +642,15 @@ const selectedTotal = selectedSubtotal;
       <Typography.Text>{formatPrice(selectedSubtotal)}</Typography.Text>
     </div>
 
-    {/* Chỉ hiển thị 'Tiết kiệm' để người dùng biết họ đã được giảm bao nhiêu */}
-    {selectedDiscount > 0 && (
+    {/* Hiển thị giảm giá chỉ khi có mã giảm giá đã áp dụng và có giảm giá thực sự */}
+    {cart.discount_code && parseFloat(cart.discount_amount) > 0 && (
       <div className='flex justify-between'>
-        <Typography.Text className='text-gray-500'>Tiết kiệm</Typography.Text>
-        <Typography.Text className='text-red-500 font-medium'>
-          -{formatPrice(selectedDiscount)}
+        <Typography.Text className='text-gray-500'>
+          Giảm giá <Tag color="green">{cart.discount_code}</Tag>
         </Typography.Text>
-        <Tooltip title="Giá đã bao gồm giảm từ bảng giá / chiết khấu riêng">
-  <Tag color="green">Đã áp dụng khuyến mãi</Tag>
-</Tooltip>
-
+        <Typography.Text className='text-red-500 font-medium'>
+          -{formatPrice(cart.discount_amount)}
+        </Typography.Text>
       </div>
     )}
 
@@ -665,13 +669,12 @@ const selectedTotal = selectedSubtotal;
       Tổng cộng
     </Typography.Text>
     <div className='text-right'>
-      <Typography.Text strong className='text-blue-600 text-2xl'>
-        {formatPrice(selectedTotal)}
-      </Typography.Text>
+<Typography.Text strong className='text-blue-600 text-2xl'>
+  {formatPrice(finalTotal)}
+</Typography.Text>
       <div className='text-gray-500 text-xs'>(Đã bao gồm VAT nếu có)</div>
     </div>
   </div>
-
   <Button
     type='primary'
     block
