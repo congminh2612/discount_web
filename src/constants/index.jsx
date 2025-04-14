@@ -36,6 +36,11 @@ const getAdminNavigationItems = (t) => [
     link: '/admin/discounts',
     children: [
       {
+        id: 50,
+        title: t('sidebar.voucher'),
+        link: '/admin/discounts',
+      },
+      {
         id: 51,
         title: t('sidebar.custom_pricing'),
         link: '/admin/discounts/cp',

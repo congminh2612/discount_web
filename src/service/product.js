@@ -1,48 +1,69 @@
 import apiClient from '../config/axios.config';
 
-const getProduct = async () => {
+const getProduct = async (userId = null) => {
   try {
-    const res = await apiClient.get('/api/product');
-    return res.data;
-  } catch (error) {
-    throw new Error(error);
-  }
-};
-const getProductApplyCP = async (userId, options = {}) => {
-  try {
-    const { page = 1, limit = 10, search = '', categoryId = '' } = options;
-    const params = new URLSearchParams();
-
-    if (userId) params.append('userId', userId);
-    if (page) params.append('page', page);
-    if (limit) params.append('limit', limit);
-    if (search) params.append('search', search);
-    if (categoryId) params.append('categoryId', categoryId);
-
-    const queryString = params.toString();
-    const res = await apiClient.get(`/api/product?${queryString}`);
+    const res = await apiClient.get('/api/product', {
+      params: userId ? { userId } : {},
+    });
     return res.data;
   } catch (error) {
     throw new Error(error.message || 'Không thể tải sản phẩm');
   }
 };
 
-const getProductById = async (productId) => {
+const getProductApplyCP = async (options = {}) => {
   try {
-    const res = await apiClient.get(`/api/product/${productId}`);
+    const { page = 1, limit = 10, search = '', categoryId = '', userId } = options;
+
+    console.log('📦 [API CALL] getProductApplyCP - Params:', {
+      page, limit, search, categoryId, userId,
+    });
+
+    const res = await apiClient.get('/api/product', {
+      params: {
+        page,
+        limit,
+        search,
+        categoryId,
+        userId, // 🔥 cần thiết để truyền lên server
+      },
+    });
+
     return res.data;
   } catch (error) {
-    throw new Error(error);
+    console.error('❌ getProductApplyCP error:', error);
+    throw new Error(error.message || 'Không thể tải sản phẩm');
   }
 };
+
+
+const getProductById = async (productId, userId = null) => {
+  try {
+    const res = await apiClient.get(`/api/product/${productId}`, {
+      params: userId ? { userId } : {},
+    });
+    return res.data;
+  } catch (error) {
+    throw new Error(error.message || 'Không thể tải sản phẩm');
+  }
+};
+
 const getProductApplyCPById = async (productId, userId) => {
   try {
-    const res = await apiClient.get(`/api/product/${productId}?userId=${userId}`);
+    console.log('📦 [API CALL] getProductApplyCPById:', { productId, userId });
+
+    const res = await apiClient.get(`/api/product/${productId}`, {
+      params: { userId }, // 🔥 truyền userId nếu cần apply rule
+    });
+
     return res.data;
   } catch (error) {
-    throw new Error(error);
+    console.error('❌ getProductApplyCPById error:', error);
+    throw new Error(error.message || 'Không thể tải sản phẩm chi tiết');
   }
 };
+
+
 
 const createProduct = async (product) => {
   try {

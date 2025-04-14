@@ -36,9 +36,11 @@ import {
 } from '@ant-design/icons';
 import TextArea from 'antd/es/input/TextArea';
 import { useNavigate } from 'react-router-dom';
-import { cartService } from '@/service/cart';
 import { useSelector } from 'react-redux';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as discountService from '@/service/discount'; // thay vì gọi từ cartService
+import { useRef } from 'react'; // THÊM DÒNG NÀY
+import { cartService } from '@/service/cart'; // ⚠️ thiếu dòng này
 
 const CartScreen = () => {
   const navigate = useNavigate();
@@ -48,6 +50,13 @@ const CartScreen = () => {
   const currentUser = useSelector((state) => state.auth.currentUser);
   const userId = currentUser?.id;
   const queryClient = useQueryClient();
+  const hasAppliedDiscount = useRef(false);
+  const cartQueryKey = ['cart', userId]; 
+  const [discountApplied, setDiscountApplied] = useState(false);
+  const [availableCodes, setAvailableCodes] = useState([]);
+  
+  const [wantApplyDiscount, setWantApplyDiscount] = useState(false); // Thêm state điều khiển
+
 
   const [progressPercent, setProgressPercent] = useState(0);
 
@@ -56,11 +65,22 @@ const CartScreen = () => {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['cart'],
-    queryFn: () => cartService.getCart(),
-    enabled: !!currentUser,
+    queryKey: ['cart', userId, { apply_discount: wantApplyDiscount, selected_item_ids: selectedItems.join(',') }],
+    queryFn: () => cartService.getCart(wantApplyDiscount, selectedItems),
+    enabled: !!userId,
   });
   
+  const cart = cartResponse?.data || {};
+  const items = cart.items || [];
+// Tính toán lại theo selectedItems
+const selectedCartItems = items.filter((item) => selectedItems.includes(item.id));
+const selectedSubtotal = selectedCartItems.reduce((sum, item) => sum + parseFloat(item.total_price || 0), 0);
+
+// Sử dụng discount_amount từ API nếu có mã giảm giá
+const discountAmount = cart.discount_code ? parseFloat(cart.discount_amount || 0) : 0;
+
+// Tính tổng cộng sau khi trừ giảm giá
+const finalTotal = Math.max(selectedSubtotal - discountAmount, 0);
 
   const handleQuantityChange = async (itemId, change) => {
     const item = items.find((i) => i.id === itemId);
@@ -86,19 +106,60 @@ const CartScreen = () => {
     }
   };
   
-  const handleApplyCoupon = async () => {
-    if (!couponCode) {
+  const handleApplyCoupon = async (code = couponCode) => {
+    if (!code) {
       message.warning('Vui lòng nhập mã giảm giá');
       return;
     }
+    
+    if (selectedItems.length === 0) {
+      message.warning('Vui lòng chọn ít nhất một sản phẩm để áp dụng mã giảm giá');
+      return;
+    }
+  
     try {
-      await cartService.applyDiscount(couponCode);
-      message.success('Áp dụng mã giảm giá thành công');
-      queryClient.invalidateQueries(['cart']);
+      const result = await cartService.applyDiscount({
+        discount_code: code,
+        selected_item_ids: selectedItems,
+      });
+      
+      if (result?.success) {
+        message.success(result.message || 'Áp dụng mã giảm giá thành công');
+        setDiscountApplied(true);
+        setWantApplyDiscount(true);
+        queryClient.invalidateQueries(['cart', userId, { apply_discount: true, selected_item_ids: selectedItems }]);
+      } else {
+        message.error(result?.message || 'Không áp dụng được mã giảm giá');
+      }
     } catch (err) {
-      message.error('Không áp dụng được mã giảm giá');
+      message.error(err?.response?.data?.message || 'Có lỗi khi áp dụng mã');
     }
   };
+  
+  
+  useEffect(() => {
+    if (cart?.discount_code && !discountApplied) {
+      setCouponCode(cart.discount_code); // ✅ Gán lại input nếu cart có sẵn mã
+    }
+  }, [cart]);
+
+  useEffect(() => {
+    if (userId) {
+      discountService.getAvailableDiscounts(userId).then((res) => {
+        if (res?.success) {
+          setAvailableCodes(res.data);
+        }
+      }).catch((err) => {
+        console.error('Lỗi khi lấy danh sách mã:', err.message);
+      });
+    }
+  }, [userId]);
+  
+  
+  
+  
+  
+  
   
 
   const handleUpdateNote = async () => {
@@ -117,11 +178,17 @@ const CartScreen = () => {
     try {
       await cartService.removeDiscount();
       message.success('Đã hủy mã giảm giá');
-      queryClient.invalidateQueries(['cart']);
+      setCouponCode('');
+      setDiscountApplied(false);
+      setWantApplyDiscount(false); // ✅ KHÔNG áp lại discount
+      queryClient.invalidateQueries(['cart', userId, { apply_discount: false }]);
     } catch (err) {
       message.error('Không thể hủy mã giảm giá');
     }
   };
+  
+  
+  
   const handleSelectItem = (itemId) => {
     setSelectedItems((prev) => {
       if (prev.includes(itemId)) {
@@ -201,8 +268,7 @@ const CartScreen = () => {
     );
   }
 
-  const cart = cartResponse?.data || {};
-  const items = cart.items || [];
+
   const subtotal = parseFloat(cart.subtotal) || 0;
   const discount_amount = parseFloat(cart.discount_amount) || 0;
   const total_amount = parseFloat(cart.total_amount) || 0;
@@ -425,15 +491,17 @@ const CartScreen = () => {
 
                         <div className='flex flex-col items-start sm:items-end'>
                           <div className='flex items-baseline'>
-                            <Typography.Text strong className='text-lg text-blue-600'>
-                              {formatPrice(item.total_price)}
-                            </Typography.Text>
+                          <Typography.Text strong className='text-lg text-blue-600'>
+  {formatPrice(item.total_price)}
+</Typography.Text>
 
-                            {parseFloat(item.discount_amount) > 0 && (
-                              <Typography.Text delete className='text-gray-400 text-sm ml-2'>
-                                {formatPrice(item.unit_price * item.quantity)}
-                              </Typography.Text>
-                            )}
+{parseFloat(item.discount_amount) > 0 && item.original_price && (
+  <Typography.Text delete className='text-gray-400 text-sm ml-2'>
+    {formatPrice(item.original_price * item.quantity)}
+  </Typography.Text>
+)}
+
+
                           </div>
 
                           <div className='flex items-center mt-3 border rounded-full bg-gray-50 overflow-hidden'>
@@ -529,119 +597,99 @@ const CartScreen = () => {
                   </div>
                 ) : (
                   <div>
-                    <div className='flex'>
-                      <Input
-                        placeholder='Nhập mã giảm giá'
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                        prefix={<TagOutlined className='text-gray-400' />}
-                        className='rounded-l-lg'
-                      />
-                      <Button type='primary' onClick={handleApplyCoupon} className='rounded-r-lg'>
-                        Áp dụng
-                      </Button>
-                    </div>
-                    <div className='mt-3 flex flex-wrap gap-2'>
-                      <Tag
-                        color='orange'
-                        className='cursor-pointer hover:opacity-80'
-                        onClick={() => setCouponCode('SUMMER2025')}
-                      >
-                        SUMMER2025
-                      </Tag>
-                      <Tag
-                        color='blue'
-                        className='cursor-pointer hover:opacity-80'
-                        onClick={() => setCouponCode('WELCOME10')}
-                      >
-                        WELCOME10
-                      </Tag>
-                      <Tag
-                        color='green'
-                        className='cursor-pointer hover:opacity-80'
-                        onClick={() => setCouponCode('FREESHIP')}
-                      >
-                        FREESHIP
-                      </Tag>
-                    </div>
-                    <Typography.Text type='secondary' className='text-xs mt-2 block'>
-                      Nhấp vào mã để áp dụng hoặc nhập mã khác
-                    </Typography.Text>
+<div className='flex'>
+  <Input
+    placeholder='Nhập mã giảm giá'
+    value={couponCode}
+    onChange={(e) => setCouponCode(e.target.value)}
+    prefix={<TagOutlined className='text-gray-400' />}
+    className='rounded-l-lg'
+  />
+  <Button type='primary' onClick={() => handleApplyCoupon()} className='rounded-r-lg'>
+    Áp dụng
+  </Button>
+</div>
+<div className='mt-3 flex flex-wrap gap-2'>
+  {availableCodes.map((code) => (
+    <Tag
+      key={code}
+      color='blue'
+      className='cursor-pointer hover:opacity-80'
+      onClick={() => setCouponCode(code)}
+    >
+      {code}
+    </Tag>
+  ))}
+</div>
+<Typography.Text type='secondary' className='text-xs mt-2 block'>
+  Nhấp vào mã để sao chép, sau đó nhấn "Áp dụng"
+</Typography.Text>
+
                   </div>
                 )}
               </Card>
 
-              <Card className='rounded-xl border-0 shadow-sm'>
-                <Typography.Title level={4} className='mb-6'>
-                  Thông tin thanh toán
-                </Typography.Title>
+              <Card className="rounded-xl border-0 shadow-sm">
+  <Typography.Title level={4} className='mb-6'>
+    Thông tin thanh toán
+  </Typography.Title>
 
-                <div className='space-y-4 mb-6'>
-                  <div className='flex justify-between'>
-                    <Typography.Text className='text-gray-500'>Tạm tính ({items.length} sản phẩm)</Typography.Text>
-                    <Typography.Text>{formatPrice(subtotal)}</Typography.Text>
-                  </div>
+  <div className='space-y-4 mb-6'>
+    <div className='flex justify-between'>
+      <Typography.Text className='text-gray-500'>
+        Tạm tính ({selectedCartItems.length} sản phẩm)
+      </Typography.Text>
+      <Typography.Text>{formatPrice(selectedSubtotal)}</Typography.Text>
+    </div>
 
-                  {discount_amount > 0 && (
-                    <div className='flex justify-between'>
-                      <Typography.Text className='text-gray-500'>Giảm giá</Typography.Text>
-                      <Typography.Text className='text-red-500 font-medium'>
-                        -{formatPrice(discount_amount)}
-                      </Typography.Text>
-                    </div>
-                  )}
+    {/* Hiển thị giảm giá chỉ khi có mã giảm giá đã áp dụng và có giảm giá thực sự */}
+    {cart.discount_code && parseFloat(cart.discount_amount) > 0 && (
+      <div className='flex justify-between'>
+        <Typography.Text className='text-gray-500'>
+          Giảm giá <Tag color="green">{cart.discount_code}</Tag>
+        </Typography.Text>
+        <Typography.Text className='text-red-500 font-medium'>
+          -{formatPrice(cart.discount_amount)}
+        </Typography.Text>
+      </div>
+    )}
 
-                  <div className='flex justify-between'>
-                    <Typography.Text className='text-gray-500'>Phí vận chuyển</Typography.Text>
-                    <Typography.Text className={isFreeShipping ? 'text-green-500 font-medium' : ''}>
-                      {isFreeShipping ? 'Miễn phí' : 'Tính khi thanh toán'}
-                    </Typography.Text>
-                  </div>
-                </div>
+    <div className='flex justify-between'>
+      <Typography.Text className='text-gray-500'>Phí vận chuyển</Typography.Text>
+      <Typography.Text className={selectedSubtotal >= freeShippingThreshold ? 'text-green-500 font-medium' : ''}>
+        {selectedSubtotal >= freeShippingThreshold ? 'Miễn phí' : 'Tính khi thanh toán'}
+      </Typography.Text>
+    </div>
+  </div>
 
-                <Divider className='my-4' />
+  <Divider className='my-4' />
 
-                <div className='flex justify-between mb-6'>
-                  <Typography.Text strong className='text-lg'>
-                    Tổng cộng
-                  </Typography.Text>
-                  <div className='text-right'>
-                    <Typography.Text strong className='text-blue-600 text-2xl'>
-                      {formatPrice(total_amount)}
-                    </Typography.Text>
-                    <div className='text-gray-500 text-xs'>(Đã bao gồm VAT nếu có)</div>
-                  </div>
-                </div>
+  <div className='flex justify-between mb-6'>
+    <Typography.Text strong className='text-lg'>
+      Tổng cộng
+    </Typography.Text>
+    <div className='text-right'>
+<Typography.Text strong className='text-blue-600 text-2xl'>
+  {formatPrice(finalTotal)}
+</Typography.Text>
+      <div className='text-gray-500 text-xs'>(Đã bao gồm VAT nếu có)</div>
+    </div>
+  </div>
+  <Button
+    type='primary'
+    block
+    size='large'
+    onClick={() => navigate('/checkout', { state: { selectedItems } })}
+    className='h-14 text-base flex items-center justify-center'
+    disabled={selectedCartItems.length === 0}
+  >
+    <LockOutlined className='mr-2' />
+    Tiến hành thanh toán ({selectedCartItems.length})
+  </Button>
+</Card>
 
-                <Button
-                  type='primary'
-                  block
-                  size='large'
-                  onClick={() => navigate('/checkout')}
-                  className='h-14 text-base flex items-center justify-center'
-                  disabled={items.length === 0}
-                >
-                  <LockOutlined className='mr-2' />
-                  Tiến hành thanh toán ({items.length})
-                </Button>
 
-                <div className='mt-6 space-y-3'>
-                  <div className='flex items-center text-gray-600'>
-                    <SafetyOutlined className='text-green-500 mr-2' />
-                    <Typography.Text className='text-sm'>Thanh toán an toàn & bảo mật</Typography.Text>
-                  </div>
 
-                  <div className='flex items-center text-gray-600'>
-                    <TruckOutlined className='text-blue-500 mr-2' />
-                    <Typography.Text className='text-sm'>Giao hàng nhanh toàn quốc</Typography.Text>
-                  </div>
-
-                  <div className='flex items-center text-gray-600'>
-                    <ClockCircleOutlined className='text-orange-500 mr-2' />
-                    <Typography.Text className='text-sm'>Đổi trả miễn phí trong 7 ngày</Typography.Text>
-                  </div>
-                </div>
-              </Card>
             </div>
           </Col>
         </Row>

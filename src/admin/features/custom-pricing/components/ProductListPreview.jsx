@@ -2,18 +2,52 @@ import React from 'react';
 import { Table, Tag, Tooltip } from 'antd';
 import { calculateCPPrice } from '@/utils/caculation';
 
-const ProductListPreview = ({ products, productSelected, discountValue, discountType }) => {
-  console.log('🚀 ~ ProductListPreview ~ discountType:', discountType);
-  const filteredProducts = products?.filter((p) => productSelected.includes(p.id)) || [];
+const ProductListPreview = ({ products, productSelected, variantSelected, discountValue, discountType, productType }) => {
+  const renderProductRows = () => {
+    const filteredProducts = products?.filter((p) => productSelected.includes(p.id)) || [];
+
+    return filteredProducts.map((product) => ({
+      key: `product-${product.id}`,
+      name: product.name,
+      image_url: product.image_url,
+      original_price: product.original_price,
+      final_price: calculateCPPrice(product.original_price, discountValue, discountType),
+      stock_quantity: product.stock_quantity,
+    }));
+  };
+
+  const renderVariantRows = () => {
+    const variants = [];
+
+    products?.forEach((product) => {
+      product.variants?.forEach((variant) => {
+        if (variantSelected.includes(variant.id)) {
+          variants.push({
+            key: `variant-${variant.id}`,
+            name: `${product.name} - ${variant.sku}`,
+            image_url: variant.image_url || product.image_url,
+            original_price: variant.original_price,
+            final_price: calculateCPPrice(variant.original_price, discountValue, discountType),
+            stock_quantity: variant.stock_quantity,
+          });
+        }
+      });
+    });
+
+    return variants;
+  };
+
+  const dataSource = productType === 'variant' ? renderVariantRows() : renderProductRows();
 
   const columns = [
     {
-      title: 'Sản phẩm',
-      key: 'product',
-      render: (_, record) => (
+      title: productType === 'variant' ? 'Biến thể' : 'Sản phẩm',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text, record) => (
         <div className='flex items-center gap-3'>
-          <img src={record.image_url} alt={record.name} className='w-14 h-14 object-cover rounded shadow' />
-          <span className='font-medium'>{record.name}</span>
+          <img src={record.image_url} alt={text} className='w-14 h-14 object-cover rounded shadow' />
+          <span className='font-medium'>{text}</span>
         </div>
       ),
     },
@@ -21,12 +55,16 @@ const ProductListPreview = ({ products, productSelected, discountValue, discount
       title: 'Giá gốc',
       dataIndex: 'original_price',
       key: 'original_price',
-      render: (price) => <span className='text-gray-500 line-through'>{Number(price).toLocaleString()}đ</span>,
+      render: (price) => (
+        <span className='text-gray-500 line-through'>
+          {Number(price).toLocaleString()}đ
+        </span>
+      ),
     },
     {
       title: 'Giảm giá',
       key: 'discount',
-      render: (_, record) =>
+      render: () =>
         discountValue > 0 ? (
           <Tooltip title={`Giảm: ${discountValue} ${discountType === 'percentage' ? '%' : 'đ'}`}>
             <Tag color='red' className='text-sm'>
@@ -40,11 +78,13 @@ const ProductListPreview = ({ products, productSelected, discountValue, discount
     },
     {
       title: 'Giá cuối',
+      dataIndex: 'final_price',
       key: 'final_price',
-      render: (_, record) => {
-        const finalPrice = calculateCPPrice(record.original_price, discountValue, discountType);
-        return <span className='text-red-500 font-bold'>{Number(finalPrice).toLocaleString()}đ</span>;
-      },
+      render: (final) => (
+        <span className='text-red-500 font-bold'>
+          {Number(final).toLocaleString()}đ
+        </span>
+      ),
     },
     {
       title: 'Kho',
@@ -56,7 +96,7 @@ const ProductListPreview = ({ products, productSelected, discountValue, discount
 
   return (
     <div className='p-4 bg-white rounded-lg shadow'>
-      <Table columns={columns} dataSource={filteredProducts} rowKey='id' pagination={false} />
+      <Table columns={columns} dataSource={dataSource} rowKey='key' pagination={false} />
     </div>
   );
 };

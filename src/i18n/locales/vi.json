@@ -14,7 +14,8 @@
     "discounts": "Khuyến mãi",
     "custom_pricing": "Giá tùy chỉnh",
     "price_list": "Bảng giá",
-    "quantity_break": "Chiết khấu số lượng"
+    "quantity_break": "Chiết khấu số lượng",
+    "voucher": "Mã giảm giá"
   },
   "cp": {
     "title": "Giá tùy chỉnh",
