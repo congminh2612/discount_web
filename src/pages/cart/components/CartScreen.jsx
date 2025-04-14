@@ -36,9 +36,9 @@ import {
 } from '@ant-design/icons';
 import TextArea from 'antd/es/input/TextArea';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { cartService } from '@/service/cart';
 import { useSelector } from 'react-redux';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const CartScreen = () => {
   const navigate = useNavigate();
@@ -47,45 +47,81 @@ const CartScreen = () => {
   const [selectedItems, setSelectedItems] = useState([]);
   const currentUser = useSelector((state) => state.auth.currentUser);
   const userId = currentUser?.id;
+  const queryClient = useQueryClient();
 
-  // Animation effect for free shipping progress
   const [progressPercent, setProgressPercent] = useState(0);
 
-  // Lấy dữ liệu giỏ hàng từ API
   const {
     data: cartResponse,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['cart', userId],
-    queryFn: () => cartService.getCart(userId),
-    enabled: !!userId,
+    queryKey: ['cart'],
+    queryFn: () => cartService.getCart(),
+    enabled: !!currentUser,
   });
+  
 
-  // Các hàm xử lý tạm thời chỉ log ra console
-  const handleQuantityChange = (itemId, change) => {
-    console.log(`Thay đổi số lượng, itemId: ${itemId}, change: ${change}`);
+  const handleQuantityChange = async (itemId, change) => {
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return;
+    const newQuantity = item.quantity + change;
+    if (newQuantity < 1) return;
+  
+    try {
+      await cartService.updateCartItem(itemId, newQuantity);
+      queryClient.invalidateQueries(['cart']);
+    } catch (err) {
+      message.error('Lỗi khi cập nhật số lượng');
+    }
   };
-
-  const handleRemoveItem = (itemId) => {
-    console.log(`Xóa sản phẩm, itemId: ${itemId}`);
-    message.success('Đã xóa sản phẩm khỏi giỏ hàng');
+  
+  const handleRemoveItem = async (itemId) => {
+    try {
+      await cartService.removeCartItem(itemId);
+      message.success('Đã xóa sản phẩm khỏi giỏ hàng');
+      queryClient.invalidateQueries(['cart']);
+    } catch (err) {
+      message.error('Lỗi khi xóa sản phẩm');
+    }
   };
-
-  const handleApplyCoupon = () => {
+  
+  const handleApplyCoupon = async () => {
     if (!couponCode) {
       message.warning('Vui lòng nhập mã giảm giá');
       return;
     }
-    console.log(`Áp dụng mã giảm giá: ${couponCode}`);
-    message.success('Áp dụng mã giảm giá thành công');
+    try {
+      await cartService.applyDiscount(couponCode);
+      message.success('Áp dụng mã giảm giá thành công');
+      queryClient.invalidateQueries(['cart']);
+    } catch (err) {
+      message.error('Không áp dụng được mã giảm giá');
+    }
   };
+  
 
-  const handleUpdateNote = () => {
-    console.log(`Cập nhật ghi chú: ${orderNote}`);
-    message.success('Đã lưu ghi chú đơn hàng');
+  const handleUpdateNote = async () => {
+    if (!orderNote || orderNote.trim() === '') return;
+  
+    try {
+      await cartService.updateShippingInfo({ note: orderNote.trim() });
+      message.success('Đã lưu ghi chú đơn hàng');
+      queryClient.invalidateQueries(['cart']);
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Không thể lưu ghi chú');
+    }
   };
-
+  
+  const handleRemoveCoupon = async () => {
+    try {
+      await cartService.removeDiscount();
+      message.success('Đã hủy mã giảm giá');
+      queryClient.invalidateQueries(['cart']);
+    } catch (err) {
+      message.error('Không thể hủy mã giảm giá');
+    }
+  };
   const handleSelectItem = (itemId) => {
     setSelectedItems((prev) => {
       if (prev.includes(itemId)) {
@@ -104,14 +140,12 @@ const CartScreen = () => {
     }
   };
 
-  // Calculate progress percent for free shipping
   useEffect(() => {
     if (cartResponse?.data) {
       const subtotal = parseFloat(cartResponse.data.subtotal) || 0;
       const freeShippingThreshold = 500000; // Ngưỡng miễn phí vận chuyển (500,000đ)
       const percent = Math.min(Math.round((subtotal / freeShippingThreshold) * 100), 100);
 
-      // Animate the progress
       let startPercent = 0;
       const interval = setInterval(() => {
         startPercent += 2;
@@ -125,7 +159,6 @@ const CartScreen = () => {
     }
   }, [cartResponse]);
 
-  // Hiển thị trạng thái loading
   if (isLoading) {
     return (
       <div className='bg-white min-h-screen flex flex-col items-center justify-center'>
@@ -143,7 +176,6 @@ const CartScreen = () => {
     );
   }
 
-  // Hiển thị lỗi nếu có
   if (isError) {
     return (
       <div className='bg-white min-h-screen flex flex-col items-center justify-center'>
@@ -169,14 +201,12 @@ const CartScreen = () => {
     );
   }
 
-  // Lấy dữ liệu từ response API
   const cart = cartResponse?.data || {};
   const items = cart.items || [];
   const subtotal = parseFloat(cart.subtotal) || 0;
   const discount_amount = parseFloat(cart.discount_amount) || 0;
   const total_amount = parseFloat(cart.total_amount) || 0;
 
-  // Hiển thị giỏ hàng trống
   if (!items || items.length === 0) {
     return (
       <div className='bg-white min-h-screen'>
@@ -245,13 +275,11 @@ const CartScreen = () => {
     );
   }
 
-  // Format số tiền VND
   const formatPrice = (price) => {
     return parseFloat(price).toLocaleString('vi-VN') + 'đ';
   };
 
-  // Calculate free shipping info
-  const freeShippingThreshold = 500000; // 500,000đ
+  const freeShippingThreshold = 500000; 
   const amountToFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
   const isFreeShipping = subtotal >= freeShippingThreshold;
 
@@ -492,9 +520,10 @@ const CartScreen = () => {
                         </Tag>
                         <Typography.Text type='success'>Đã áp dụng</Typography.Text>
                       </div>
-                      <Button danger type='link' size='small' onClick={() => console.log('Hủy mã giảm giá')}>
-                        Hủy
-                      </Button>
+                      <Button danger type='link' size='small' onClick={handleRemoveCoupon}>
+  Hủy
+</Button>
+
                     </div>
                     <div className='text-red-500 font-medium mt-2'>Giảm: {formatPrice(discount_amount)}</div>
                   </div>

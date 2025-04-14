@@ -1,13 +1,30 @@
-import { Input, Button, Dropdown, Menu, Select } from 'antd';
-import { SearchOutlined, HeartOutlined, ShoppingCartOutlined, MenuOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  Input,
+  Button,
+  Dropdown,
+  Menu,
+  Select,
+  Badge,
+  Tooltip,
+} from 'antd';
+import {
+  SearchOutlined,
+  HeartOutlined,
+  ShoppingCartOutlined,
+  MenuOutlined,
+  UserOutlined,
+  DownOutlined,
+  LogoutOutlined,
+} from '@ant-design/icons';
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { DownOutlined } from '@ant-design/icons';
 import { setLanguage } from '@/context/slice/language';
 import { useTranslation } from 'react-i18next';
-import { SettingOutlined, LogoutOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { logoutSuccess } from '@/context/slice/auth';
+import { useCartSummary } from '@/hooks/useCartSummary';
+import { getAuth, signOut } from 'firebase/auth';
+import { useQueryClient } from '@tanstack/react-query';
 
 const languages = [
   { key: 'en', label: 'English', flag: '🇬🇧' },
@@ -16,22 +33,39 @@ const languages = [
 
 const Header = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const language = useSelector((state) => state.language.language);
+  const currentUser = useSelector((state) => state.auth.currentUser);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const { data: cartData } = useCartSummary();
+  const cartCount = cartData?.data?.item_count || 0;
+
   const handleLanguageChange = (value) => {
     dispatch(setLanguage(value));
   };
 
-  const currentUser = useSelector((state) => state.auth.currentUser);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const handleLogout = async () => {
+    try {
+      const auth = getAuth();
+      await signOut(auth); // Đăng xuất khỏi Firebase
+      dispatch(logoutSuccess()); // Reset Redux state
+      localStorage.removeItem('user'); // Xóa localStorage nếu có
+      queryClient.clear(); // Clear react-query cache
+      navigate('/'); // Chuyển hướng về trang chủ
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const userMenu = (
     <Menu>
-      <Menu.Item key='settings' icon={<SettingOutlined />}>
-        {t('home.settings')}
+      <Menu.Item key='profile' icon={<UserOutlined />} onClick={() => navigate('/profile')}>
+        Hồ sơ cá nhân
       </Menu.Item>
-      <Menu.Item key='logout' onClick={() => dispatch(logoutSuccess())} icon={<LogoutOutlined />}>
+      <Menu.Item key='logout' icon={<LogoutOutlined />} onClick={handleLogout}>
         {t('home.logout')}
       </Menu.Item>
     </Menu>
@@ -62,12 +96,27 @@ const Header = () => {
 
           <div className='flex items-center space-x-4 md:space-x-6'>
             <Button type='text' shape='circle' icon={<HeartOutlined className='text-gray-600 text-xl' />} />
-            <Button type='text' shape='circle' icon={<ShoppingCartOutlined className='text-gray-600 text-xl' />} />
+            <Badge count={cartCount} offset={[-2, 2]}>
+              <Button
+                type='text'
+                shape='circle'
+                icon={<ShoppingCartOutlined className='text-gray-600 text-xl' />}
+                onClick={() => navigate('/cart')}
+              />
+            </Badge>
 
             {currentUser ? (
               <Dropdown overlay={userMenu} trigger={['click']}>
                 <Button type='text' className='flex items-center space-x-2'>
-                  <UserOutlined className='text-gray-600 text-xl' />
+                  {currentUser.avatar ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt='avatar'
+                      className='w-6 h-6 rounded-full object-cover border'
+                    />
+                  ) : (
+                    <UserOutlined className='text-gray-600 text-xl' />
+                  )}
                   <span className='hidden md:inline'>{currentUser.name}</span>
                   <DownOutlined />
                 </Button>
